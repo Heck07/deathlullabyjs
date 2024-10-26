@@ -23,7 +23,7 @@ exports.register = async (req, res) => {
 
     // Insérer l'utilisateur dans la base de données
     const insertQuery = 'INSERT INTO users ( email, password) VALUES (?, ?)';
-    await db.promise().query(insertQuery, [ email, hashedPassword]);
+    await db.promise().query(insertQuery, [email, hashedPassword]);
 
     res.status(201).send('Utilisateur créé avec succès.');
   } catch (err) {
