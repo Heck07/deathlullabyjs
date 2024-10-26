@@ -6,9 +6,9 @@ const generateToken = require('../utils/generateTokens');
 // Inscription d'un utilisateur
 exports.register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!username || !email || !password) {
+    if (!email || !password) {
       return res.status(400).send('Tous les champs sont requis.');
     }
 
@@ -22,8 +22,8 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Insérer l'utilisateur dans la base de données
-    const insertQuery = 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)';
-    await db.promise().query(insertQuery, [username, email, hashedPassword]);
+    const insertQuery = 'INSERT INTO users ( email, password) VALUES (?, ?, ?)';
+    await db.promise().query(insertQuery, [ email, hashedPassword]);
 
     res.status(201).send('Utilisateur créé avec succès.');
   } catch (err) {
