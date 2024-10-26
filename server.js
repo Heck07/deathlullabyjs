@@ -1,24 +1,37 @@
+// index.js à la racine de votre backend
 const express = require('express');
-const cors = require('cors');
 const dotenv = require('dotenv');
-const db = require('./config/db');  // La config MySQL
+const cors = require('cors');
+const db = require('./config/database');
+const routes = require('./routes'); // Ce fichier routes est l'index.js du dossier routes
 
 dotenv.config();
 const app = express();
+const port = process.env.PORT || 3000;
 
-app.use(cors());
+// Middleware CORS pour autoriser les requêtes cross-origin
+app.use(cors({
+  origin: ['http://localhost:8080'], // Autorisez ici les origines dont vous avez besoin
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true
+}));
+
+// Middleware pour parser les requêtes JSON
 app.use(express.json());
 
-// Import des routes
-const userRoutes = require('./routes/users');
-const productRoutes = require('./routes/products');
+// Connexion à la base de données
+db.connect((err) => {
+  if (err) {
+    console.error('Erreur de connexion à la base de données :', err);
+    throw err;
+  }
+  console.log('Connecté à la base de données MySQL');
+});
 
-// Routes API
-app.use('/api/users', userRoutes);
-app.use('/api/products', productRoutes);
+// Enregistrement des routes
+app.use('/api', routes); // J'ai changé '/routes' en '/api' pour des conventions plus standard
 
-// Port d'écoute du serveur
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+// Démarrage du serveur
+app.listen(port, () => {
+  console.log(`Serveur backend en écoute sur le port ${port}`);
 });
