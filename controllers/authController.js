@@ -22,7 +22,7 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Insérer l'utilisateur dans la base de données
-    const insertQuery = 'INSERT INTO users ( email, password) VALUES (?, ?)';
+    const insertQuery = 'INSERT INTO users (email, password) VALUES (?, ?)';
     await db.promise().query(insertQuery, [email, hashedPassword]);
 
     res.status(201).send('Utilisateur créé avec succès.');
