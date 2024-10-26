@@ -1,0 +1,4 @@
+node_modules
+.env
+createTables.js
+dropTables.js
