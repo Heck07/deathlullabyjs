@@ -20,11 +20,17 @@ router.post(
     '/',
     authenticateToken,
     roleMiddleware('admin'),
-    upload.array('images', 5), // Gérer l'upload d'image
+    upload.array('images', 10), // Gérer l'upload d'image
     productController.addProduct
   );
 // Mettre à jour un produit (accès réservé aux administrateurs)
-router.put('/:id', upload.array('images', 5), productController.updateProduct);
+router.put(
+  '/:id',
+  authenticateToken,
+  roleMiddleware('admin'), 
+  upload.array('images', 10), 
+  productController.updateProduct
+);
 
 // Supprimer un produit (accès réservé aux administrateurs)
 router.delete('/:id', authenticateToken, roleMiddleware('admin'), productController.deleteProduct);
