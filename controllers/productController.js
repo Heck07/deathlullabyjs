@@ -59,36 +59,45 @@ exports.getAllProducts = (req, res) => {
 };
 
 
-// Ajouter un nouveau produit
+// AJOUTER UN Produit
 exports.addProduct = (req, res) => {
   const { name, price, categoryId } = req.body;
-  const imageUrl = req.file ? req.file.path : null;
 
-  // Vérifie que les champs nécessaires sont présents
-  if (!name || !price || !categoryId || !imageUrl) {
-    return res.status(400).send('Tous les champs, y compris l\'image, sont requis.');
+  // Vérifie que tous les champs obligatoires sont présents
+  if (!name || !price || !categoryId || !req.files || req.files.length === 0) {
+    return res.status(400).send("Tous les champs, y compris au moins une image, sont requis.");
   }
 
-  // Insère le produit dans la table products
+  // Insère le produit
   const productQuery = 'INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)';
   db.query(productQuery, [name, price, categoryId], (err, result) => {
     if (err) {
-      return res.status(500).send('Erreur lors de l\'ajout du produit.');
+      console.error("Erreur lors de l'ajout du produit :", err);
+      return res.status(500).send("Erreur lors de l'ajout du produit.");
     }
 
     const productId = result.insertId;
 
-    // Insère l'image dans la table product_images avec l'ID du produit
-    const imageQuery = 'INSERT INTO product_images (product_id, image_url) VALUES (?, ?)';
-    db.query(imageQuery, [productId, imageUrl], (err) => {
-      if (err) {
-        return res.status(500).send('Erreur lors de l\'ajout de l\'image du produit.');
-      }
-      res.status(201).send({ id: productId, name, price, categoryId, imageUrl });
+    // Insère chaque image
+    const imageQueries = req.files.map(file => {
+      return new Promise((resolve, reject) => {
+        const imageQuery = 'INSERT INTO product_images (product_id, image_url) VALUES (?, ?)';
+        db.query(imageQuery, [productId, file.path], (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
     });
+
+    // Gère les promesses d'insertion d'images
+    Promise.all(imageQueries)
+      .then(() => res.status(201).send({ id: productId, name, price, categoryId, images: req.files.map(f => f.path) }))
+      .catch(error => {
+        console.error("Erreur lors de l'ajout d'images :", error);
+        res.status(500).send("Erreur lors de l'ajout d'images.");
+      });
   });
 };
-
 
 
 // Mettre à jour un produit
