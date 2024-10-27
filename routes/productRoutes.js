@@ -20,7 +20,7 @@ router.post(
     '/',
     authenticateToken,
     roleMiddleware('admin'),
-    upload.single('image'), // Gérer l'upload d'image
+    upload.array('images'), // Gérer l'upload d'image
     productController.addProduct
   );
 // Mettre à jour un produit (accès réservé aux administrateurs)
