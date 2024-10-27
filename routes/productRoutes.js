@@ -11,8 +11,13 @@ router.get('/:id', productController.getProductById);
 router.get('/', productController.getAllProducts);
 
 // Ajouter un produit (accès réservé aux administrateurs)
-router.post('/', authenticateToken, roleMiddleware('admin'), productController.addProduct);
-
+router.post(
+    '/',
+    authenticateToken,
+    roleMiddleware('admin'),
+    upload.single('image'), // Gérer l'upload d'image
+    productController.addProduct
+  );
 // Mettre à jour un produit (accès réservé aux administrateurs)
 router.put('/:id', authenticateToken, roleMiddleware('admin'), productController.updateProduct);
 

@@ -32,20 +32,34 @@ exports.getAllProducts = (req, res) => {
 // Ajouter un nouveau produit
 exports.addProduct = (req, res) => {
   const { name, price, categoryId } = req.body;
+  const imageUrl = req.file ? req.file.path : null;
 
-  if (!name || !price || !categoryId) {
-    return res.status(400).send('Tous les champs sont requis.');
+  // Vérifie que les champs nécessaires sont présents
+  if (!name || !price || !categoryId || !imageUrl) {
+    return res.status(400).send('Tous les champs, y compris l\'image, sont requis.');
   }
 
-  const query = 'INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)';
-  db.query(query, [name, price, categoryId], (err, result) => {
+  // Insère le produit dans la table products
+  const productQuery = 'INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)';
+  db.query(productQuery, [name, price, categoryId], (err, result) => {
     if (err) {
-      console.error('Erreur lors de l\'ajout du produit :', err);
-      return res.status(500).send('Erreur interne lors de l\'ajout du produit.');
+      return res.status(500).send('Erreur lors de l\'ajout du produit.');
     }
-    res.status(201).send({ id: result.insertId, name, price, categoryId });
+
+    const productId = result.insertId;
+
+    // Insère l'image dans la table product_images avec l'ID du produit
+    const imageQuery = 'INSERT INTO product_images (product_id, image_url) VALUES (?, ?)';
+    db.query(imageQuery, [productId, imageUrl], (err) => {
+      if (err) {
+        return res.status(500).send('Erreur lors de l\'ajout de l\'image du produit.');
+      }
+      res.status(201).send({ id: productId, name, price, categoryId, imageUrl });
+    });
   });
 };
+
+
 
 // Mettre à jour un produit
 exports.updateProduct = (req, res) => {
