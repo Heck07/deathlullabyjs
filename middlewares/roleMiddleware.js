@@ -5,7 +5,7 @@ const db = require('../config/database');
 const roleMiddleware = (allowedRoles) => {
   return (req, res, next) => {
     if (!req.user || !req.user.id) {
-      return res.status(401).send('Accès refusé : utilisateur non authentifié.');
+      return res.status(401).send('Accès refusé : utilisateur non authentifié');
     }
 
     const userId = req.user.id;
