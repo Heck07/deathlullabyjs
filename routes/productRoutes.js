@@ -12,6 +12,9 @@ router.get('/:id', productController.getProductById);
 // Récupérer tous les produits
 router.get('/', productController.getAllProducts);
 
+router.get('/:id/images', productController.getProductImages);
+
+
 // Ajouter un produit (accès réservé aux administrateurs)
 router.post(
     '/',

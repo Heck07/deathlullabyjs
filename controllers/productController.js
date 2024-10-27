@@ -17,6 +17,20 @@ exports.getProductById = (req, res) => {
   });
 };
 
+exports.getProductImages = (req, res) => {
+  const productId = req.params.id;
+  const query = 'SELECT image_url FROM product_images WHERE product_id = ?';
+
+  db.query(query, [productId], (err, results) => {
+    if (err) {
+      console.error('Erreur lors de la récupération des images :', err);
+      return res.status(500).send('Erreur interne lors de la récupération des images.');
+    }
+    res.status(200).json(results.map(row => row.image_url));
+  });
+};
+
+
 // Récupérer tous les produits
 exports.getAllProducts = (req, res) => {
   const query = `
