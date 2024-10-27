@@ -99,28 +99,41 @@ exports.addProduct = (req, res) => {
   });
 };
 
-
-// Mettre à jour un produit
+// Mettre a jour un produit
 exports.updateProduct = (req, res) => {
   const productId = req.params.id;
   const { name, price, categoryId } = req.body;
 
   if (!name || !price || !categoryId) {
-    return res.status(400).send('Tous les champs sont requis.');
+    return res.status(400).send("Tous les champs sont requis.");
   }
 
-  const query = 'UPDATE products SET name = ?, price = ?, category_id = ? WHERE id = ?';
-  db.query(query, [name, price, categoryId, productId], (err, result) => {
+  const updateQuery = 'UPDATE products SET name = ?, price = ?, category_id = ? WHERE id = ?';
+  db.query(updateQuery, [name, price, categoryId, productId], (err) => {
     if (err) {
-      console.error('Erreur lors de la mise à jour du produit :', err);
-      return res.status(500).send('Erreur interne lors de la mise à jour du produit.');
+      return res.status(500).send("Erreur lors de la mise à jour du produit.");
     }
-    if (result.affectedRows === 0) {
-      return res.status(404).send('Produit non trouvé.');
+
+    if (req.files && req.files.length > 0) {
+      const imageQueries = req.files.map((file) => {
+        return new Promise((resolve, reject) => {
+          const imageQuery = 'INSERT INTO product_images (product_id, image_url) VALUES (?, ?)';
+          db.query(imageQuery, [productId, file.path], (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      });
+
+      Promise.all(imageQueries)
+        .then(() => res.status(200).send("Produit mis à jour avec succès."))
+        .catch(() => res.status(500).send("Erreur lors de l'ajout des nouvelles images."));
+    } else {
+      res.status(200).send("Produit mis à jour avec succès.");
     }
-    res.status(200).send('Produit mis à jour avec succès.');
   });
 };
+
 
 // Supprimer un produit
 exports.deleteProduct = (req, res) => {
