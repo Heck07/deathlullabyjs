@@ -19,15 +19,31 @@ exports.getProductById = (req, res) => {
 
 // Récupérer tous les produits
 exports.getAllProducts = (req, res) => {
-  const query = 'SELECT * FROM products';
+  const query = `
+    SELECT p.id, p.name, p.price, p.category_id, pi.image_url
+    FROM products p
+    LEFT JOIN product_images pi ON p.id = pi.product_id
+  `;
   db.query(query, (err, results) => {
     if (err) {
       console.error('Erreur lors de la récupération des produits :', err);
       return res.status(500).send('Erreur interne lors de la récupération des produits.');
     }
-    res.status(200).json(results);
+    const products = results.reduce((acc, row) => {
+      const { id, name, price, category_id, image_url } = row;
+      let product = acc.find(p => p.id === id);
+
+      if (!product) {
+        product = { id, name, price, category_id, images: [] };
+        acc.push(product);
+      }
+      if (image_url) product.images.push(image_url);
+      return acc;
+    }, []);
+    res.status(200).json(products);
   });
 };
+
 
 // Ajouter un nouveau produit
 exports.addProduct = (req, res) => {
