@@ -1,21 +1,37 @@
 // productController.js
 const db = require('../config/database');
 
+// Updated getProductById to include colors
 exports.getProductById = (req, res) => {
   const productId = req.params.id;
 
-  const query = 'SELECT * FROM products WHERE id = ?';
-  db.query(query, [productId], (err, results) => {
+  const productQuery = 'SELECT * FROM products WHERE id = ?';
+  const colorsQuery = 'SELECT color_name, hex_code FROM colors WHERE product_id = ?';
+  
+  db.query(productQuery, [productId], (err, productResults) => {
     if (err) {
       console.error('Erreur lors de la récupération du produit :', err);
       return res.status(500).send('Erreur interne lors de la récupération du produit.');
     }
-    if (results.length === 0) {
+    if (productResults.length === 0) {
       return res.status(404).send('Produit non trouvé.');
     }
-    res.status(200).json(results[0]); // Envoie le premier résultat, puisque l'ID est unique
+
+    db.query(colorsQuery, [productId], (err, colorResults) => {
+      if (err) {
+        console.error('Erreur lors de la récupération des couleurs :', err);
+        return res.status(500).send('Erreur interne lors de la récupération des couleurs.');
+      }
+
+      const product = {
+        ...productResults[0],
+        colors: colorResults, // Add colors to the product data
+      };
+      res.status(200).json(product);
+    });
   });
 };
+
 
 exports.getProductImages = (req, res) => {
   const productId = req.params.id;
@@ -31,32 +47,53 @@ exports.getProductImages = (req, res) => {
 };
 
 
-// Récupérer tous les produits
+// Updated getAllProducts to include colors
 exports.getAllProducts = (req, res) => {
-  const query = `
+  const productsQuery = `
     SELECT p.id, p.name, p.price, p.category_id, pi.image_url
     FROM products p
     LEFT JOIN product_images pi ON p.id = pi.product_id
   `;
-  db.query(query, (err, results) => {
+
+  const colorsQuery = `
+    SELECT c.product_id, c.color_name, c.hex_code
+    FROM colors c
+  `;
+
+  db.query(productsQuery, (err, productResults) => {
     if (err) {
       console.error('Erreur lors de la récupération des produits :', err);
       return res.status(500).send('Erreur interne lors de la récupération des produits.');
     }
-    const products = results.reduce((acc, row) => {
-      const { id, name, price, category_id, image_url } = row;
-      let product = acc.find(p => p.id === id);
 
-      if (!product) {
-        product = { id, name, price, category_id, images: [] };
-        acc.push(product);
+    db.query(colorsQuery, (err, colorResults) => {
+      if (err) {
+        console.error('Erreur lors de la récupération des couleurs :', err);
+        return res.status(500).send('Erreur interne lors de la récupération des couleurs.');
       }
-      if (image_url) product.images.push(image_url);
-      return acc;
-    }, []);
-    res.status(200).json(products);
+
+      const products = productResults.reduce((acc, row) => {
+        const { id, name, price, category_id, image_url } = row;
+        let product = acc.find(p => p.id === id);
+
+        if (!product) {
+          product = { id, name, price, category_id, images: [], colors: [] };
+          acc.push(product);
+        }
+
+        if (image_url) product.images.push(image_url);
+        product.colors = colorResults
+          .filter(color => color.product_id === id)
+          .map(({ color_name, hex_code }) => ({ color_name, hex_code }));
+        
+        return acc;
+      }, []);
+      
+      res.status(200).json(products);
+    });
   });
 };
+
 
 
 // AJOUTER UN Produit
