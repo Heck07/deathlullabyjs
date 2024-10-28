@@ -6,8 +6,12 @@ exports.getProductById = (req, res) => {
   const productId = req.params.id;
 
   const productQuery = 'SELECT * FROM products WHERE id = ?';
-  const colorsQuery = 'SELECT color_name, hex_code, image_url FROM colors WHERE product_id = ?';
-  
+  const colorsQuery = `
+  SELECT c.product_id, c.color_name, c.hex_code, pi.image_url 
+  FROM colors c 
+  LEFT JOIN product_images pi ON c.image_id = pi.id
+  WHERE c.product_id = ?
+`;  
   db.query(productQuery, [productId], (err, productResults) => {
     if (err) {
       console.error('Erreur lors de la récupération du produit :', err);
@@ -55,11 +59,12 @@ exports.getAllProducts = (req, res) => {
     LEFT JOIN product_images pi ON p.id = pi.product_id
   `;
 
-    const colorsQuery = `
+  const colorsQuery = `
     SELECT c.product_id, c.color_name, c.hex_code, pi.image_url 
     FROM colors c 
     LEFT JOIN product_images pi ON c.image_id = pi.id
-    `;
+    WHERE c.product_id = ?
+  `;
 
 
   db.query(productsQuery, (err, productResults) => {
