@@ -55,13 +55,12 @@ exports.getAllProducts = (req, res) => {
     LEFT JOIN product_images pi ON p.id = pi.product_id
   `;
 
-  const colorsQuery = `
-    SELECT c.product_id, c.color_name, c.hex_code, pi.image_url 
-    FROM colors c 
-    LEFT JOIN product_images pi ON c.image_id = pi.id
-    WHERE c.product_id = ?
-  `;
-
+const colorsQuery = `
+  SELECT c.product_id, c.color_name, c.hex_code, pi.image_url 
+  FROM colors c 
+  LEFT JOIN product_images pi ON c.image_id = pi.id
+  WHERE c.product_id = ?
+`;
 
   db.query(productsQuery, (err, productResults) => {
     if (err) {
