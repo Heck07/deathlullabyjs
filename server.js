@@ -17,9 +17,7 @@ app.use(cors({
 }));
 
 // Middleware pour parser les requêtes JSON
-
-app.use(express.json({ limit: '10mb' })); // pour les données JSON
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.json());
 
 // Connexion à la base de données
 db.connect((err) => {
