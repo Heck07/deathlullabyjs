@@ -55,12 +55,11 @@ exports.getAllProducts = (req, res) => {
     LEFT JOIN product_images pi ON p.id = pi.product_id
   `;
 
-const colorsQuery = `
-  SELECT c.product_id, c.color_name, c.hex_code, pi.image_url 
-  FROM colors c 
-  LEFT JOIN product_images pi ON c.image_id = pi.id
-  WHERE c.product_id = ?
-`;
+  const colorsQuery = `
+    SELECT c.product_id, c.color_name, c.hex_code, pi.image_url
+    FROM colors c
+    LEFT JOIN product_images pi ON c.image_id = pi.id
+  `;
 
   db.query(productsQuery, (err, productResults) => {
     if (err) {
@@ -84,10 +83,13 @@ const colorsQuery = `
         }
 
         if (image_url) product.images.push(image_url);
-        product.colors = colorResults
-          .filter(color => color.product_id === id)
-          .map(({ color_name, hex_code }) => ({ color_name, hex_code }));
         
+        const colorsForProduct = colorResults
+          .filter(color => color.product_id === id)
+          .map(({ color_name, hex_code, image_url }) => ({ color_name, hex_code, image_url }));
+        
+        product.colors = colorsForProduct;
+
         return acc;
       }, []);
       
@@ -95,6 +97,7 @@ const colorsQuery = `
     });
   });
 };
+
 
 
 
