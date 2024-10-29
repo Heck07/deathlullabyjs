@@ -217,7 +217,7 @@ exports.addColor = async (req, res) => {
   const images = req.files || [];
   console.log(`Product ID: ${productId}`);
 
-  try {
+  
     // Insert color into colors table
     const colorResult = await db.query(
       'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
@@ -237,10 +237,14 @@ exports.addColor = async (req, res) => {
       });
     });
 
-    await Promise.all(imagePromises);
-    res.status(201).json({ message: 'Color and images added successfully' });
-  } catch (error) {
-    console.error('Error adding color and images:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-};
+      // Gère les promesses d'insertion d'images
+      Promise.all(imageQueries)
+        .then(() => res.status(201).send({
+          id: productId,
+          colors: [{ color_name, color_hex, images: req.files.map(f => f.path) }]
+        }))
+        .catch(error => {
+          console.error("Erreur lors de l'ajout d'images :", error);
+          res.status(500).send("Erreur lors de l'ajout d'images.");
+        });
+      };
