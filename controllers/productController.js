@@ -216,20 +216,26 @@ exports.deleteProduct = (req, res) => {
 exports.addColor = async (req, res) => {
   const { color_name, hex_code } = req.body;
   const productId = req.params.id;
+  const images = req.files || [];
 
   try {
-    // Insère la couleur dans la base de données
+    // Insertion de la couleur
     const colorResult = await db.query(
       'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
       [productId, color_name, hex_code]
     );
     const colorId = colorResult.insertId;
+    console.log(`Color ajouté avec ID: ${colorId}`);
 
-    // Insère les images en utilisant Multer configuré pour Cloudinary
-    const imagePromises = req.files.map((file) => {
+    // Traitement des images
+    const imagePromises = images.map(async (file) => {
+      const uploadResponse = await cloudinary.uploader.upload(file.path); // Upload sur Cloudinary
+      console.log(`URL Cloudinary: ${uploadResponse.secure_url}`);
+      
+      // Insertion de l'URL de l'image dans la base de données
       return db.query(
         'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
-        [productId, file.path, colorId]
+        [productId, uploadResponse.secure_url, colorId]
       );
     });
 
