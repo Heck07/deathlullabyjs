@@ -1,13 +1,36 @@
 const db = require('../config/database');
 
-exports.addColor = (req, res) => {
-  const { id: productId } = req.params;
+exports.addColor = async (req, res) => {
   const { color_name, hex_code } = req.body;
-  const query = 'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)';
-  db.query(query, [productId, color_name, hex_code], (err, result) => {
-    if (err) return res.status(500).send('Error adding color');
-    res.status(201).json({ id: result.insertId, color_name, hex_code });
-  });
+  const productId = req.params.id;
+  const images = req.files || [];
+
+  try {
+    // Insère la couleur dans la base de données
+    const [colorResult] = await db.query(
+      'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
+      [productId, color_name, hex_code]
+    );
+    const colorId = colorResult.insertId;
+    console.log(`Color added with ID: ${colorId}`);
+
+    // Traite chaque image, upload sur Cloudinary et ajoute dans product_images
+    for (const file of images) {
+      const uploadResponse = await cloudinary.uploader.upload(file.path);
+      console.log(`Uploaded to Cloudinary: ${uploadResponse.secure_url}`);
+      
+      await db.query(
+        'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
+        [productId, uploadResponse.secure_url, colorId]
+      );
+      console.log(`Image added to product_images for color ID: ${colorId}`);
+    }
+
+    res.status(201).json({ message: 'Couleur et images ajoutées avec succès' });
+  } catch (error) {
+    console.error("Erreur lors de l'ajout de la couleur et des images :", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
 };
 
 exports.getColorsByProductId = (req, res) => {
