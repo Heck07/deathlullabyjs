@@ -33,6 +33,7 @@ router.put(
   productController.updateProduct
 );
 
+
 // Supprimer un produit (accès réservé aux administrateurs)
 router.delete('/:id', authenticateToken, roleMiddleware('admin'), productController.deleteProduct);
 
