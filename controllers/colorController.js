@@ -52,7 +52,7 @@ exports.addColor = (req, res) => {
 
 exports.getColorsByProductId = (req, res) => {
   const { id: productId } = req.params;
-  const query = 'SELECT color_name, hex_code, image_url FROM colors WHERE product_id = ?';
+  const query = 'SELECT color_name, hex_code FROM colors WHERE product_id = ?';
   db.query(query, [productId], (err, results) => {
     if (err) return res.status(500).send('Error retrieving colors');
     res.status(200).json(results);
