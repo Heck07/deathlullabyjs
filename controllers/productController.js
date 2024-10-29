@@ -213,35 +213,27 @@ exports.deleteProduct = (req, res) => {
   });
 };
 
-// Méthode addColor similaire à addProduct pour ajouter couleur et images
+// Méthode pour ajouter couleur
 exports.addColor = async (req, res) => {
-  const { color_name, hex_code } = req.body;
-  const productId = req.params.id;
-  const images = req.files || [];
-  console.log("Received images:", images);  // Logs the images received
+  const { color_name, hex_code } = req.body; // Récupération des données de couleur depuis le corps de la requête
+  const productId = req.params.id; // Identification du produit
 
   try {
+    // Insertion de la couleur dans la table "colors"
     const [colorResult] = await db.query(
       'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
       [productId, color_name, hex_code]
     );
     const colorId = colorResult.insertId;
 
-    for (const file of images) {
-      const uploadResponse = await cloudinary.uploader.upload(file.path);
-      console.log("Uploaded to Cloudinary:", uploadResponse.secure_url);  // Logs Cloudinary URL
-      
-      await db.query(
-        'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
-        [productId, uploadResponse.secure_url, colorId]
-      );
-      console.log(`Image added to product_images for color ID: ${colorId}`);
-    }
-
-    res.status(201).json({ message: 'Couleur et images ajoutées avec succès' });
+    // Log pour vérification
+    console.log(`Couleur ajoutée avec ID: ${colorId} pour le produit ID: ${productId}`);
+    
+    res.status(201).json({ message: 'Couleur ajoutée avec succès', colorId });
   } catch (error) {
-    console.error("Erreur lors de l'ajout de la couleur et des images :", error);
+    console.error("Erreur lors de l'ajout de la couleur :", error);
     res.status(500).json({ error: "Erreur serveur" });
   }
 };
+
 
