@@ -9,4 +9,14 @@ const db = mysql.createPool({
     database: process.env.DB_NAME
 });
 
+// Vérifier la connexion au pool
+db.getConnection()
+    .then(connection => {
+        console.log('Connected to the MySQL database');
+        connection.release(); // Libère la connexion après vérification
+    })
+    .catch(err => {
+        console.error('Error connecting to the database:', err);
+    });
+
 module.exports = db;
