@@ -211,6 +211,7 @@ exports.deleteProduct = (req, res) => {
 };
 
 exports.addColor = async (req, res) => {
+  console.log(req.files);
   const { color_name, hex_code } = req.body;
   const productId = req.params.id;
   const images = req.files || [];
@@ -225,7 +226,6 @@ exports.addColor = async (req, res) => {
 
     // Insertion des images associées à cette couleur
     const imagePromises = images.map((file) => {
-      console.log(file.path);
       return db.query(
         'INSERT INTO product_images (product_id, color_id, image_url) VALUES (?, ?, ?)',
         [productId, colorId, file.path]
