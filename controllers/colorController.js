@@ -1,4 +1,6 @@
 const db = require('../config/database');
+const cloudinary = require('../config/cloudinaryConfig'); // Import Cloudinary config
+const upload = require('../config/uploadConfig');
 
 exports.addColor = async (req, res) => {
   const { color_name, hex_code } = req.body;

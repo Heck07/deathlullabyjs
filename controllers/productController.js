@@ -213,27 +213,3 @@ exports.deleteProduct = (req, res) => {
   });
 };
 
-// Méthode pour ajouter couleur
-exports.addColor = async (req, res) => {
-  const { color_name, hex_code } = req.body; // Récupération des données de couleur depuis le corps de la requête
-  const productId = req.params.id; // Identification du produit
-
-  try {
-    // Insertion de la couleur dans la table "colors"
-    const [colorResult] = await db.query(
-      'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
-      [productId, color_name, hex_code]
-    );
-    const colorId = colorResult.insertId;
-
-    // Log pour vérification
-    console.log(`Couleur ajoutée avec ID: ${colorId} pour le produit ID: ${productId}`);
-    
-    res.status(201).json({ message: 'Couleur ajoutée avec succès', colorId });
-  } catch (error) {
-    console.error("Erreur lors de l'ajout de la couleur :", error);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-};
-
-
