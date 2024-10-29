@@ -231,6 +231,7 @@ exports.addColor = (req, res) => {
     // Insère les images pour la couleur associée
     const imageQueries = images.map((file) => {
       return new Promise((resolve, reject) => {
+        console.log(file.path); // Ensure the path is correct
         const imageQuery = 'INSERT INTO product_images (product_id, color_id, image_url) VALUES (?, ?, ?)';
         db.query(imageQuery, [productId, colorId, file.path], (err) => {
           if (err) reject(err);
