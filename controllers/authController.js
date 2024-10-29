@@ -13,7 +13,7 @@ exports.register = async (req, res) => {
     }
 
     // Vérifier si l'email existe déjà
-    const [checkUser] = await db.promise().query('SELECT * FROM users WHERE email = ?', [email]);
+    const [checkUser] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     if (checkUser.length > 0) {
       return res.status(400).send('Cet email est déjà utilisé.');
     }
@@ -23,7 +23,7 @@ exports.register = async (req, res) => {
 
     // Insérer l'utilisateur dans la base de données
     const insertQuery = 'INSERT INTO users (email, password) VALUES (?, ?)';
-    await db.promise().query(insertQuery, [email, hashedPassword]);
+    await db.query(insertQuery, [email, hashedPassword]);
 
     res.status(201).send('Utilisateur créé avec succès.');
   } catch (err) {
@@ -42,7 +42,7 @@ exports.login = async (req, res) => {
     }
 
     // Vérifier si l'utilisateur existe
-    const [results] = await db.promise().query('SELECT * FROM users WHERE email = ?', [email]);
+    const [results] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     if (results.length === 0) {
       return res.status(404).send('Utilisateur non trouvé.');
     }
@@ -68,7 +68,7 @@ exports.getUserDetails = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const [results] = await db.promise().query('SELECT * FROM users WHERE id = ?', [userId]);
+    const [results] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
 
     if (results.length === 0) {
       return res.status(404).send('Utilisateur non trouvé.');

@@ -28,7 +28,7 @@ exports.updateUser = async (req, res) => {
     }
 
     // Mettre à jour l'utilisateur
-    const [result] = await db.promise().query('UPDATE users SET role = ? WHERE id = ?', [role, userId]);
+    const [result] = await db.query('UPDATE users SET role = ? WHERE id = ?', [role, userId]);
     
     if (result.affectedRows === 0) {
       return res.status(404).send('Utilisateur non trouvé.');
@@ -62,7 +62,7 @@ exports.getUserDetails = async (req, res) => {
   try {
     const userId = req.user.id; // Utiliser l'ID stocké par le middleware `authenticateToken`
 
-    const [results] = await db.promise().query('SELECT * FROM users WHERE id = ?', [userId]);
+    const [results] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
 
     if (results.length === 0) {
       return res.status(404).send('Utilisateur non trouvé.');
@@ -94,7 +94,7 @@ exports.updateUserPassword = async (req, res) => {
 
     // Mettre à jour le mot de passe dans la base de données
     const updateQuery = 'UPDATE users SET password = ? WHERE id = ?';
-    await db.promise().query(updateQuery, [hashedPassword, userId]);
+    await db.query(updateQuery, [hashedPassword, userId]);
 
     res.status(200).send('Mot de passe mis à jour avec succès.');
   } catch (err) {

@@ -1,167 +1,104 @@
-// productController.js
 const db = require('../config/database');
-const cloudinary = require('../config/cloudinaryConfig'); // Import Cloudinary config
-const upload = require('../config/uploadConfig'); // Assurez-vous que ce fichier configure multer avec Cloudinary
+const cloudinary = require('../config/cloudinaryConfig');
 
-
-// Updated getProductById to include colors
-exports.getProductById = (req, res) => {
+// Fetch a single product by ID with colors
+exports.getProductById = async (req, res) => {
   const productId = req.params.id;
-
-  const productQuery = 'SELECT * FROM products WHERE id = ?';
-  const colorsQuery = 'SELECT color_name, hex_code, image_url FROM colors WHERE product_id = ?';
   
-  db.query(productQuery, [productId], (err, productResults) => {
-    if (err) {
-      console.error('Erreur lors de la récupération du produit :', err);
-      return res.status(500).send('Erreur interne lors de la récupération du produit.');
-    }
+  try {
+    const [productResults] = await db.query('SELECT * FROM products WHERE id = ?', [productId]);
+    
     if (productResults.length === 0) {
       return res.status(404).send('Produit non trouvé.');
     }
 
-    db.query(colorsQuery, [productId], (err, colorResults) => {
-      if (err) {
-        console.error('Erreur lors de la récupération des couleurs :', err);
-        return res.status(500).send('Erreur interne lors de la récupération des couleurs.');
-      }
+    const [colorResults] = await db.query('SELECT color_name, hex_code, image_url FROM colors WHERE product_id = ?', [productId]);
 
-      const product = {
-        ...productResults[0],
-        colors: colorResults, // Add colors to the product data
-      };
-      res.status(200).json(product);
-    });
-  });
+    const product = {
+      ...productResults[0],
+      colors: colorResults,
+    };
+    
+    res.status(200).json(product);
+  } catch (err) {
+    console.error('Erreur lors de la récupération du produit :', err);
+    res.status(500).send('Erreur interne lors de la récupération du produit.');
+  }
 };
 
+// Fetch all products with their colors
+exports.getAllProducts = async (req, res) => {
+  try {
+    const [productResults] = await db.query(`
+      SELECT p.id, p.name, p.price, p.category_id, pi.image_url
+      FROM products p
+      LEFT JOIN product_images pi ON p.id = pi.product_id
+    `);
 
-exports.getProductImages = (req, res) => {
-  const productId = req.params.id;
-  const query = 'SELECT image_url FROM product_images WHERE product_id = ?';
+    const [colorResults] = await db.query(`
+      SELECT c.product_id, c.color_name, c.hex_code, pi.image_url
+      FROM colors c
+      LEFT JOIN product_images pi ON c.image_id = pi.id
+    `);
 
-  db.query(query, [productId], (err, results) => {
-    if (err) {
-      console.error('Erreur lors de la récupération des images :', err);
-      return res.status(500).send('Erreur interne lors de la récupération des images.');
-    }
-    res.status(200).json(results.map(row => row.image_url));
-  });
-};
+    const products = productResults.reduce((acc, row) => {
+      const { id, name, price, category_id, image_url } = row;
+      let product = acc.find(p => p.id === id);
 
-
-// Updated getAllProducts to include colors
-exports.getAllProducts = (req, res) => {
-  const productsQuery = `
-    SELECT p.id, p.name, p.price, p.category_id, pi.image_url
-    FROM products p
-    LEFT JOIN product_images pi ON p.id = pi.product_id
-  `;
-
-  const colorsQuery = `
-    SELECT c.product_id, c.color_name, c.hex_code, pi.image_url
-    FROM colors c
-    LEFT JOIN product_images pi ON c.image_id = pi.id
-  `;
-
-  db.query(productsQuery, (err, productResults) => {
-    if (err) {
-      console.error('Erreur lors de la récupération des produits :', err);
-      return res.status(500).send('Erreur interne lors de la récupération des produits.');
-    }
-
-    db.query(colorsQuery, (err, colorResults) => {
-      if (err) {
-        console.error('Erreur lors de la récupération des couleurs :', err);
-        return res.status(500).send('Erreur interne lors de la récupération des couleurs.');
+      if (!product) {
+        product = { id, name, price, category_id, images: [], colors: [] };
+        acc.push(product);
       }
 
-      const products = productResults.reduce((acc, row) => {
-        const { id, name, price, category_id, image_url } = row;
-        let product = acc.find(p => p.id === id);
+      if (image_url) product.images.push(image_url);
 
-        if (!product) {
-          product = { id, name, price, category_id, images: [], colors: [] };
-          acc.push(product);
-        }
-
-        if (image_url) product.images.push(image_url);
-        
-        const colorsForProduct = colorResults
-          .filter(color => color.product_id === id)
-          .map(({ color_name, hex_code, image_url }) => ({ color_name, hex_code, image_url }));
-        
-        product.colors = colorsForProduct;
-
-        return acc;
-      }, []);
+      const colorsForProduct = colorResults
+        .filter(color => color.product_id === id)
+        .map(({ color_name, hex_code, image_url }) => ({ color_name, hex_code, image_url }));
       
-      res.status(200).json(products);
-    });
-  });
+      product.colors = colorsForProduct;
+
+      return acc;
+    }, []);
+
+    res.status(200).json(products);
+  } catch (err) {
+    console.error('Erreur lors de la récupération des produits :', err);
+    res.status(500).send('Erreur interne lors de la récupération des produits.');
+  }
 };
 
-
-
-
-// AJOUTER UN Produit avec couleurs et images associées
-exports.addProduct = (req, res) => {
+// Add a new product with color and images
+exports.addProduct = async (req, res) => {
   const { name, price, categoryId, color_name, color_hex } = req.body;
 
-  // Vérifie la présence des champs obligatoires
   if (!name || !price || !categoryId || !color_name || !color_hex || !req.files || req.files.length === 0) {
     return res.status(400).send("Tous les champs, y compris une couleur et des images, sont requis.");
   }
 
-  // Insère le produit
-  const productQuery = 'INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)';
-  db.query(productQuery, [name, price, categoryId], (err, result) => {
-    if (err) {
-      console.error("Erreur lors de l'ajout du produit :", err);
-      return res.status(500).send("Erreur lors de l'ajout du produit.");
-    }
-    const productId = result.insertId;
+  try {
+    const [productResult] = await db.query('INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)', [name, price, categoryId]);
+    const productId = productResult.insertId;
 
-    // Insère la couleur principale du produit
-    const colorQuery = 'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)';
-    db.query(colorQuery, [productId, color_name, color_hex], (err, colorResult) => {
-      if (err) {
-        console.error("Erreur lors de l'ajout de la couleur :", err);
-        return res.status(500).send("Erreur lors de l'ajout de la couleur.");
-      }
-      const colorId = colorResult.insertId;
+    const [colorResult] = await db.query('INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)', [productId, color_name, color_hex]);
+    const colorId = colorResult.insertId;
 
-      // Insère les images pour la couleur associée
-      const imageQueries = req.files.map(file => {
-        return new Promise((resolve, reject) => {
-          const imageQuery = 'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)';
-          db.query(imageQuery, [productId, file.path, colorId], (err) => {
-            if (err) reject(err);
-            else resolve();
-          });
-        });
-      });
-
-      // Gère les promesses d'insertion d'images
-      Promise.all(imageQueries)
-        .then(() => res.status(201).send({
-          id: productId,
-          name,
-          price,
-          categoryId,
-          colors: [{ color_name, color_hex, images: req.files.map(f => f.path) }]
-        }))
-        .catch(error => {
-          console.error("Erreur lors de l'ajout d'images :", error);
-          res.status(500).send("Erreur lors de l'ajout d'images.");
-        });
+    const imagePromises = req.files.map(async (file) => {
+      const uploadResponse = await cloudinary.uploader.upload(file.path);
+      await db.query('INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)', [productId, uploadResponse.secure_url, colorId]);
     });
-  });
+
+    await Promise.all(imagePromises);
+
+    res.status(201).json({ message: 'Produit ajouté avec succès' });
+  } catch (err) {
+    console.error("Erreur lors de l'ajout du produit :", err);
+    res.status(500).send("Erreur lors de l'ajout du produit.");
+  }
 };
 
-
-// Mettre a jour un produit
-exports.updateProduct = (req, res) => {
+// Update a product with optional images
+exports.updateProduct = async (req, res) => {
   const productId = req.params.id;
   const { name, price, categoryId } = req.body;
 
@@ -169,47 +106,63 @@ exports.updateProduct = (req, res) => {
     return res.status(400).send("Tous les champs sont requis.");
   }
 
-  const updateQuery = 'UPDATE products SET name = ?, price = ?, category_id = ? WHERE id = ?';
-  db.query(updateQuery, [name, price, categoryId, productId], (err) => {
-    if (err) {
-      return res.status(500).send("Erreur lors de la mise à jour du produit.");
-    }
+  try {
+    await db.query('UPDATE products SET name = ?, price = ?, category_id = ? WHERE id = ?', [name, price, categoryId, productId]);
 
     if (req.files && req.files.length > 0) {
-      const imageQueries = req.files.map((file) => {
-        return new Promise((resolve, reject) => {
-          const imageQuery = 'INSERT INTO product_images (product_id, image_url) VALUES (?, ?)';
-          db.query(imageQuery, [productId, file.path], (err) => {
-            if (err) reject(err);
-            else resolve();
-          });
-        });
+      const imagePromises = req.files.map(async (file) => {
+        const uploadResponse = await cloudinary.uploader.upload(file.path);
+        await db.query('INSERT INTO product_images (product_id, image_url) VALUES (?, ?)', [productId, uploadResponse.secure_url]);
       });
 
-      Promise.all(imageQueries)
-        .then(() => res.status(200).send("Produit mis à jour avec succès."))
-        .catch(() => res.status(500).send("Erreur lors de l'ajout des nouvelles images."));
-    } else {
-      res.status(200).send("Produit mis à jour avec succès.");
+      await Promise.all(imagePromises);
     }
-  });
+
+    res.status(200).send("Produit mis à jour avec succès.");
+  } catch (err) {
+    console.error("Erreur lors de la mise à jour du produit :", err);
+    res.status(500).send("Erreur lors de la mise à jour du produit.");
+  }
 };
 
-
-// Supprimer un produit
-exports.deleteProduct = (req, res) => {
+// Delete a product
+exports.deleteProduct = async (req, res) => {
   const productId = req.params.id;
 
-  const query = 'DELETE FROM products WHERE id = ?';
-  db.query(query, [productId], (err, result) => {
-    if (err) {
-      console.error('Erreur lors de la suppression du produit :', err);
-      return res.status(500).send('Erreur interne lors de la suppression du produit.');
-    }
+  try {
+    const [result] = await db.query('DELETE FROM products WHERE id = ?', [productId]);
+
     if (result.affectedRows === 0) {
       return res.status(404).send('Produit non trouvé.');
     }
+
     res.status(200).send('Produit supprimé avec succès.');
-  });
+  } catch (err) {
+    console.error('Erreur lors de la suppression du produit :', err);
+    res.status(500).send('Erreur interne lors de la suppression du produit.');
+  }
 };
 
+// Add a color and its images
+exports.addColor = async (req, res) => {
+  const { color_name, hex_code } = req.body;
+  const productId = req.params.id;
+  const images = req.files || [];
+
+  try {
+    const [colorResult] = await db.query('INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)', [productId, color_name, hex_code]);
+    const colorId = colorResult.insertId;
+
+    const imagePromises = images.map(async (file) => {
+      const uploadResponse = await cloudinary.uploader.upload(file.path);
+      await db.query('INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)', [productId, uploadResponse.secure_url, colorId]);
+    });
+
+    await Promise.all(imagePromises);
+
+    res.status(201).json({ message: 'Couleur et images ajoutées avec succès' });
+  } catch (err) {
+    console.error("Erreur lors de l'ajout de la couleur et des images :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
