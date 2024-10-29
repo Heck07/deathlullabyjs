@@ -211,32 +211,41 @@ exports.deleteProduct = (req, res) => {
   });
 };
 
+// Fonction de téléchargement d'image sur Cloudinary
+const uploadImage = (file) => {
+  return cloudinary.uploader.upload(file.path);
+};
+
 exports.addColor = async (req, res) => {
   const { color_name, hex_code } = req.body;
   const productId = req.params.id;
-  const images = req.files || [];
+  const images = req.files || []; // Vérifie les fichiers image
 
   try {
-      // Insère la couleur dans la base de données
-      const colorResult = await db.query(
-          'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
-          [productId, color_name, hex_code]
+    // Étape 1 : Insertion de la couleur dans la base de données
+    const colorResult = await db.query(
+      'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
+      [productId, color_name, hex_code]
+    );
+    const colorId = colorResult.insertId;
+    console.log(`Couleur ajoutée avec ID: ${colorId} pour le produit ${productId}`);
+
+    // Étape 2 : Télécharger chaque image sur Cloudinary et stocker les URLs
+    const imagePromises = images.map(async (file) => {
+      const uploadResponse = await uploadImage(file);
+      console.log(`Image téléchargée avec URL : ${uploadResponse.secure_url}`);
+
+      // Insertion de l'URL de l'image dans la base de données
+      return db.query(
+        'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
+        [productId, uploadResponse.secure_url, colorId]
       );
-      const colorId = colorResult.insertId;
+    });
 
-      // Télécharge chaque image sur Cloudinary et stocke les URLs
-      const imagePromises = images.map(async (file) => {
-          const uploadResponse = await uploadImage(file); // Télécharge l'image sur Cloudinary
-          return db.query(
-              'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
-              [productId, uploadResponse.secure_url, colorId] // Utilise l'URL sécurisée Cloudinary
-          );
-      });
-
-      await Promise.all(imagePromises); // Insère toutes les images en une fois après téléchargement
-      res.status(201).json({ message: 'Couleur et images ajoutées avec succès' });
+    await Promise.all(imagePromises); // Insère toutes les images en une fois
+    res.status(201).json({ message: 'Couleur et images ajoutées avec succès' });
   } catch (error) {
-      console.error("Erreur lors de l'ajout de la couleur et des images :", error);
-      res.status(500).json({ error: "Erreur serveur" });
+    console.error("Erreur lors de l'ajout de la couleur et des images :", error);
+    res.status(500).json({ error: "Erreur serveur lors de l'ajout des images." });
   }
 };
