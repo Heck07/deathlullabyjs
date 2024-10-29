@@ -6,7 +6,7 @@ exports.getProductById = (req, res) => {
   const productId = req.params.id;
 
   const productQuery = 'SELECT * FROM products WHERE id = ?';
-  const colorsQuery = 'SELECT color_name, hex_code, image_url FROM colors WHERE product_id = ?';
+  const colorsQuery = 'SELECT color_name, hex_code FROM colors WHERE product_id = ?';
   
   db.query(productQuery, [productId], (err, productResults) => {
     if (err) {
