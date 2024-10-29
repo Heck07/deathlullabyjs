@@ -213,19 +213,19 @@ exports.deleteProduct = (req, res) => {
 exports.addColor = async (req, res) => {
   const { color_name, hex_code } = req.body;
   const productId = req.params.id;
-  const images = req.files || []; // Images envoyées avec la couleur
+  const images = req.files || []; // Récupère les images envoyées
 
   try {
-    // Insertion de la couleur
-    const colorResult = await db.query(
+    // Insertion de la couleur dans la base de données
+    const [colorResult] = await db.promise().query(
       'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
       [productId, color_name, hex_code]
     );
     const colorId = colorResult.insertId;
 
-    // Insertion des images associées à cette couleur
+    // Insère chaque image pour cette couleur
     const imagePromises = images.map((file) => {
-      return db.query(
+      return db.promise().query(
         'INSERT INTO product_images (product_id, color_id, image_url) VALUES (?, ?, ?)',
         [productId, colorId, file.path]
       );
@@ -234,7 +234,8 @@ exports.addColor = async (req, res) => {
     await Promise.all(imagePromises);
     res.status(201).json({ message: 'Couleur et images ajoutées avec succès' });
   } catch (error) {
-    console.error('Erreur lors de l\'ajout de la couleur et des images:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error("Erreur lors de l'ajout de la couleur et des images :", error);
+    res.status(500).json({ error: 'Erreur serveur lors de l\'ajout de la couleur et des images' });
   }
 };
+
