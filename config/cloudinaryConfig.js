@@ -7,4 +7,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const uploadImage = (file) => {
+  return cloudinary.uploader.upload(file.path);
+};
+
 module.exports = cloudinary;

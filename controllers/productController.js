@@ -215,45 +215,28 @@ exports.addColor = async (req, res) => {
   const { color_name, hex_code } = req.body;
   const productId = req.params.id;
   const images = req.files || [];
-  console.log(`Product ID: ${productId}`);
 
-  
-    // Insert color into colors table
-    const colorResult = await db.query(
-      'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
-      [productId, color_name, hex_code]
-    );
-    const colorId = colorResult.insertId;
-    console.log(`Added color ID: ${colorId} for Product ID: ${productId}`);
+  try {
+      // Insère la couleur dans la base de données
+      const colorResult = await db.query(
+          'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
+          [productId, color_name, hex_code]
+      );
+      const colorId = colorResult.insertId;
 
-    try {
-      const imageQueries = images.map(file => {
-          console.log("Chemin de l'image :", file.path);  // Vérifie que le chemin est correct
+      // Télécharge chaque image sur Cloudinary et stocke les URLs
+      const imagePromises = images.map(async (file) => {
+          const uploadResponse = await uploadImage(file); // Télécharge l'image sur Cloudinary
           return db.query(
               'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
-              [productId, file.path, colorId]
+              [productId, uploadResponse.secure_url, colorId] // Utilise l'URL sécurisée Cloudinary
           );
       });
-      await Promise.all(imageQueries);
-      console.log("Images ajoutées pour la couleur ID:", colorId);
-      res.status(201).json({
-          id: productId,
-          colors: [{ color_name, hex_code, images: images.map(f => f.path) }]
-      });
-  } catch (error) {
-      console.error("Erreur lors de l'ajout des images :", error);
-      res.status(500).send("Erreur lors de l'ajout des images.");
-  }
-  
 
-      // Gère les promesses d'insertion d'images
-      Promise.all(imageQueries)
-        .then(() => res.status(201).send({
-          id: productId,
-          colors: [{ color_name, color_hex, images: req.files.map(f => f.path) }]
-        }))
-        .catch(error => {
-          console.error("Erreur lors de l'ajout d'images :", error);
-          res.status(500).send("Erreur lors de l'ajout d'images.");
-        });
-      };
+      await Promise.all(imagePromises); // Insère toutes les images en une fois après téléchargement
+      res.status(201).json({ message: 'Couleur et images ajoutées avec succès' });
+  } catch (error) {
+      console.error("Erreur lors de l'ajout de la couleur et des images :", error);
+      res.status(500).json({ error: "Erreur serveur" });
+  }
+};
