@@ -215,6 +215,7 @@ exports.addColor = async (req, res) => {
   const { color_name, hex_code } = req.body;
   const productId = req.params.id;
   const images = req.files || [];
+  console.log(`Product ID: ${productId}`);
 
   try {
     // Insert color into colors table
