@@ -225,6 +225,7 @@ exports.addColor = async (req, res) => {
 
     // Insertion des images associées à cette couleur
     const imagePromises = images.map((file) => {
+      console.log(file.path);
       return db.query(
         'INSERT INTO product_images (product_id, color_id, image_url) VALUES (?, ?, ?)',
         [productId, colorId, file.path]
