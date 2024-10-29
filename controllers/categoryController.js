@@ -4,7 +4,7 @@ const db = require('../config/database');
 // Récupérer toutes les catégories
 exports.getAllCategories = async (req, res) => {
   try {
-    const [results] = await db.promise().query('SELECT * FROM categories');
+    const [results] = await db.query('SELECT * FROM categories');
     res.status(200).json(results);
   } catch (err) {
     console.error('Erreur lors de la récupération des catégories :', err);
@@ -19,7 +19,7 @@ exports.addCategory = async (req, res) => {
     if (!name) {
       return res.status(400).send('Le nom de la catégorie est requis.');
     }
-    const [result] = await db.promise().query('INSERT INTO categories (name) VALUES (?)', [name]);
+    const [result] = await db.query('INSERT INTO categories (name) VALUES (?)', [name]);
     const newCategory = { id: result.insertId, name };
     res.status(201).json(newCategory);
   } catch (err) {
@@ -36,7 +36,7 @@ exports.updateCategory = async (req, res) => {
     if (!name) {
       return res.status(400).send('Le nom de la catégorie est requis.');
     }
-    const [result] = await db.promise().query('UPDATE categories SET name = ? WHERE id = ?', [name, categoryId]);
+    const [result] = await db.query('UPDATE categories SET name = ? WHERE id = ?', [name, categoryId]);
     if (result.affectedRows === 0) {
       return res.status(404).send('Catégorie non trouvée.');
     }
@@ -51,7 +51,7 @@ exports.updateCategory = async (req, res) => {
 exports.deleteCategory = async (req, res) => {
   try {
     const categoryId = req.params.id;
-    const [result] = await db.promise().query('DELETE FROM categories WHERE id = ?', [categoryId]);
+    const [result] = await db.query('DELETE FROM categories WHERE id = ?', [categoryId]);
     if (result.affectedRows === 0) {
       return res.status(404).send('Catégorie non trouvée.');
     }
