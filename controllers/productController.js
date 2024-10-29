@@ -215,31 +215,45 @@ exports.addColor = async (req, res) => {
   const { color_name, hex_code } = req.body;
   const productId = req.params.id;
   const images = req.files || [];
+  console.log(`Product ID: ${productId}`);
 
-  try {
-    // Insertion de la couleur
+  
+    // Insert color into colors table
     const colorResult = await db.query(
       'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
       [productId, color_name, hex_code]
     );
     const colorId = colorResult.insertId;
+    console.log(`Added color ID: ${colorId} for Product ID: ${productId}`);
 
-    // Traitement des images
-    const imagePromises = images.map(async (file) => {
-      const imageUrl = file.path || ""; // Vérifiez le chemin ou téléchargez sur Cloudinary
-      console.log("Image URL:", imageUrl);
-
-      // Insertion dans la table images
-      return db.query(
-        'INSERT INTO product_images (product_id, color_id, image_url) VALUES (?, ?, ?)',
-        [productId, colorId, imageUrl]
-      );
-    });
-
-    await Promise.all(imagePromises);
-    res.status(201).json({ message: 'Couleur et images ajoutées avec succès' });
+    try {
+      const imageQueries = images.map(file => {
+          console.log("Chemin de l'image :", file.path);  // Vérifie que le chemin est correct
+          return db.query(
+              'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
+              [productId, file.path, colorId]
+          );
+      });
+      await Promise.all(imageQueries);
+      console.log("Images ajoutées pour la couleur ID:", colorId);
+      res.status(201).json({
+          id: productId,
+          colors: [{ color_name, hex_code, images: images.map(f => f.path) }]
+      });
   } catch (error) {
-    console.error('Erreur lors de l\'ajout de la couleur et des images:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+      console.error("Erreur lors de l'ajout des images :", error);
+      res.status(500).send("Erreur lors de l'ajout des images.");
   }
-};
+  
+
+      // Gère les promesses d'insertion d'images
+      Promise.all(imageQueries)
+        .then(() => res.status(201).send({
+          id: productId,
+          colors: [{ color_name, color_hex, images: req.files.map(f => f.path) }]
+        }))
+        .catch(error => {
+          console.error("Erreur lors de l'ajout d'images :", error);
+          res.status(500).send("Erreur lors de l'ajout d'images.");
+        });
+      };
