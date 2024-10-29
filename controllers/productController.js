@@ -225,18 +225,15 @@ exports.addColor = async (req, res) => {
     const colorId = colorResult.insertId;
     console.log(`Added color ID: ${colorId} for Product ID: ${productId}`);
 
-    // Upload each image to Cloudinary and save the URL to the database
-    const imagePromises = images.map(async (file) => {
-      // Upload to Cloudinary
-      const result = await cloudinary.uploader.upload(file.path);
-      const imageUrl = result.secure_url; // Use the secure URL returned by Cloudinary
-      console.log(`Uploaded Image URL: ${imageUrl}`);
-
-      // Save the Cloudinary URL to the database
-      return db.query(
-        'INSERT INTO product_images (product_id, color_id, image_url) VALUES (?, ?, ?)',
-        [productId, colorId, imageUrl]
-      );
+    // Insère les images pour la couleur associée
+    const imageQueries = req.files.map(file => {
+      return new Promise((resolve, reject) => {
+        const imageQuery = 'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)';
+        db.query(imageQuery, [productId, file.path, colorId], (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
     });
 
     await Promise.all(imagePromises);
