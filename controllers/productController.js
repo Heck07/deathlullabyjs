@@ -1,5 +1,6 @@
 // productController.js
 const db = require('../config/database');
+const cloudinary = require('../config/cloudinaryConfig'); // Import Cloudinary config
 
 // Updated getProductById to include colors
 exports.getProductById = (req, res) => {
@@ -209,9 +210,6 @@ exports.deleteProduct = (req, res) => {
     res.status(200).send('Produit supprimé avec succès.');
   });
 };
-
-const db = require('../config/database');
-const cloudinary = require('../config/cloudinaryConfig'); // Import Cloudinary config
 
 exports.addColor = async (req, res) => {
   const { color_name, hex_code } = req.body;
