@@ -105,7 +105,7 @@ exports.updateProduct = async (req, res) => {
   if (!name || !price || !categoryId) {
     return res.status(400).send("Tous les champs sont requis.");
   }
-
+ 
   try {
     await db.query('UPDATE products SET name = ?, price = ?, category_id = ? WHERE id = ?', [name, price, categoryId, productId]);
 
