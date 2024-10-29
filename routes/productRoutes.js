@@ -41,7 +41,6 @@ router.post('/:id/colors', authenticateToken, roleMiddleware('admin'), colorCont
 router.get('/:id/colors', colorController.getColorsByProductId);
 router.put('/colors/:colorId', authenticateToken, roleMiddleware('admin'), colorController.updateColor);
 router.delete('/colors/:colorId', authenticateToken, roleMiddleware('admin'), colorController.deleteColor);
-router.get('/colors', colorController.getAllColors);
 
 // Routes for managing sizes
 router.post('/:id/sizes', authenticateToken, roleMiddleware('admin'), sizeController.addSize);

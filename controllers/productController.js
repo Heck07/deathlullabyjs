@@ -176,17 +176,6 @@ exports.updateProduct = (req, res) => {
   });
 };
 
-exports.getAllColors = (req, res) => {
-  const query = 'SELECT * FROM colors';
-
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error('Erreur lors de la récupération des couleurs :', err);
-      return res.status(500).send('Erreur interne lors de la récupération des couleurs.');
-    }
-    res.status(200).json(results);
-  });
-};
 
 // Supprimer un produit
 exports.deleteProduct = (req, res) => {
