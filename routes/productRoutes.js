@@ -38,9 +38,9 @@ router.put(
 router.delete('/:id', authenticateToken, roleMiddleware('admin'), productController.deleteProduct);
 
 // Routes for managing colors
-router.post('/:id/colors', authenticateToken, roleMiddleware('admin'), colorController.addColor);
+router.post('/:id/colors', authenticateToken, roleMiddleware('admin'), upload.array('images', 10), colorController.addColor);
 router.get('/:id/colors', colorController.getColorsByProductId);
-router.put('/colors/:colorId', authenticateToken, roleMiddleware('admin'), upload.array('images', 10), colorController.updateColor);
+router.put('/colors/:colorId', authenticateToken, roleMiddleware('admin'),  colorController.updateColor);
 router.delete('/colors/:colorId', authenticateToken, roleMiddleware('admin'), colorController.deleteColor);
 
 // Routes for managing sizes
