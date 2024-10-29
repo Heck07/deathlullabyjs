@@ -1,6 +1,8 @@
 // productController.js
 const db = require('../config/database');
 const cloudinary = require('../config/cloudinaryConfig'); // Import Cloudinary config
+const upload = require('../config/uploadConfig'); // Assurez-vous que ce fichier configure multer avec Cloudinary
+
 
 // Updated getProductById to include colors
 exports.getProductById = (req, res) => {
@@ -211,48 +213,30 @@ exports.deleteProduct = (req, res) => {
   });
 };
 
-// Fonction de téléchargement d'image sur Cloudinary
-const uploadImage = (file) => {
-  return cloudinary.uploader.upload(file.path);
-};
-
-// Fonction pour télécharger une image sur Cloudinary et obtenir l'URL
-async function uploadImageToCloudinary(file) {
-  try {
-    const result = await cloudinary.uploader.upload(file.path);
-    return result.secure_url; // Retourne l'URL sécurisée de l'image
-  } catch (error) {
-    console.error("Erreur lors de l'upload sur Cloudinary :", error);
-    throw new Error("Erreur d'upload Cloudinary");
-  }
-}
-
 exports.addColor = async (req, res) => {
   const { color_name, hex_code } = req.body;
   const productId = req.params.id;
-  const images = req.files || []; // Fichiers d'image associés
 
   try {
-    // Insère la couleur dans la table 'colors'
-    const [colorResult] = await db.promise().query(
+    // Insère la couleur dans la base de données
+    const colorResult = await db.query(
       'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
       [productId, color_name, hex_code]
     );
     const colorId = colorResult.insertId;
 
-    // Upload des images sur Cloudinary et insertion dans 'product_images'
-    const imageUploadPromises = images.map(async (file) => {
-      const imageUrl = await uploadImageToCloudinary(file); // Obtient l'URL après upload
-      await db.promise().query(
-        'INSERT INTO product_images (product_id, color_id, image_url) VALUES (?, ?, ?)',
-        [productId, colorId, imageUrl] // Insère avec l'URL Cloudinary
+    // Insère les images en utilisant Multer configuré pour Cloudinary
+    const imagePromises = req.files.map((file) => {
+      return db.query(
+        'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
+        [productId, file.path, colorId]
       );
     });
 
-    await Promise.all(imageUploadPromises); // Attend que tous les uploads soient complétés
+    await Promise.all(imagePromises);
     res.status(201).json({ message: 'Couleur et images ajoutées avec succès' });
   } catch (error) {
     console.error("Erreur lors de l'ajout de la couleur et des images :", error);
-    res.status(500).json({ error: "Erreur serveur lors de l'ajout des images" });
+    res.status(500).json({ error: "Erreur serveur" });
   }
-}
+};
