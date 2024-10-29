@@ -10,7 +10,7 @@ const db = mysql.createPool({
 });
 
 // Vérifier la connexion au pool
-db.getConnection()
+db.query()
     .then(connection => {
         console.log('Connected to the MySQL database');
         connection.release(); // Libère la connexion après vérification

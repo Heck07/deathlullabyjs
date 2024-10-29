@@ -20,7 +20,7 @@ app.use(cors({
 app.use(express.json());
 
 // Connexion à la base de données
-db.getConnection()
+db.query()
     .then(connection => {
         console.log('Connected to the MySQL database');
         connection.release(); // Libère la connexion après vérification
