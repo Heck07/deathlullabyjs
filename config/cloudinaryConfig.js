@@ -1,5 +1,5 @@
-// cloudinaryConfig.js
 const cloudinary = require('cloudinary').v2;
+require('dotenv').config();
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -7,17 +7,4 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Fonction de téléversement pour les fichiers
-const uploadImage = async (filePath) => {
-  try {
-    const result = await cloudinary.uploader.upload(filePath, {
-      folder: 'products' // Dossier de destination dans Cloudinary (optionnel)
-    });
-    return result;
-  } catch (error) {
-    console.error("Erreur lors de l'upload vers Cloudinary :", error);
-    throw error;
-  }
-};
-
-module.exports = { cloudinary, uploadImage };
+module.exports = cloudinary;

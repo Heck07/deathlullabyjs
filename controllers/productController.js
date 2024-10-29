@@ -216,7 +216,7 @@ exports.deleteProduct = (req, res) => {
 exports.addColor = async (req, res) => {
   const { color_name, hex_code } = req.body;
   const productId = req.params.id;
-  const images = req.files || [];
+  const images = req.files || []; // Utiliser les fichiers envoyés
 
   try {
     // Insertion de la couleur
@@ -225,24 +225,21 @@ exports.addColor = async (req, res) => {
       [productId, color_name, hex_code]
     );
     const colorId = colorResult.insertId;
-    console.log(`Color ajouté avec ID: ${colorId}`);
 
-    // Traitement des images
+    // Upload des images sur Cloudinary et insertion des URLs dans product_images
     const imagePromises = images.map(async (file) => {
-      const uploadResponse = await cloudinary.uploader.upload(file.path); // Upload sur Cloudinary
-      console.log(`URL Cloudinary: ${uploadResponse.secure_url}`);
-      
-      // Insertion de l'URL de l'image dans la base de données
+      const uploadResponse = await cloudinary.uploader.upload(file.path);
       return db.query(
         'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
         [productId, uploadResponse.secure_url, colorId]
       );
     });
 
-    await Promise.all(imagePromises);
+    await Promise.all(imagePromises); // Attente de tous les uploads et insertions
     res.status(201).json({ message: 'Couleur et images ajoutées avec succès' });
   } catch (error) {
     console.error("Erreur lors de l'ajout de la couleur et des images :", error);
-    res.status(500).json({ error: "Erreur serveur" });
+    res.status(500).json({ error: "Erreur serveur lors de l'ajout de la couleur et des images" });
   }
 };
+
