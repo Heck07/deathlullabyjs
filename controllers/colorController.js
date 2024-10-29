@@ -1,5 +1,14 @@
-// colorController.js
 const db = require('../config/database');
+
+exports.addColor = (req, res) => {
+  const { id: productId } = req.params;
+  const { color_name, hex_code } = req.body;
+  const query = 'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)';
+  db.query(query, [productId, color_name, hex_code], (err, result) => {
+    if (err) return res.status(500).send('Error adding color');
+    res.status(201).json({ id: result.insertId, color_name, hex_code });
+  });
+};
 
 exports.getColorsByProductId = (req, res) => {
   const { id: productId } = req.params;
