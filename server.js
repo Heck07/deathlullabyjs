@@ -20,13 +20,14 @@ app.use(cors({
 app.use(express.json());
 
 // Connexion à la base de données
-db.connect((err) => {
-  if (err) {
-    console.error('Erreur de connexion à la base de données :', err);
-    throw err;
-  }
-  console.log('Connecté à la base de données MySQL');
-});
+db.getConnection()
+    .then(connection => {
+        console.log('Connected to the MySQL database');
+        connection.release(); // Libère la connexion après vérification
+    })
+    .catch(err => {
+        console.error('Error connecting to the database:', err);
+    });
 
 // Enregistrement des routes
 app.use('/api', routes); // J'ai changé '/routes' en '/api' pour des conventions plus standard
