@@ -7,8 +7,17 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadImage = (file) => {
-  return cloudinary.uploader.upload(file.path);
+// Fonction de téléversement pour les fichiers
+const uploadImage = async (filePath) => {
+  try {
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder: 'products' // Dossier de destination dans Cloudinary (optionnel)
+    });
+    return result;
+  } catch (error) {
+    console.error("Erreur lors de l'upload vers Cloudinary :", error);
+    throw error;
+  }
 };
 
-module.exports = cloudinary;
+module.exports = { cloudinary, uploadImage };
