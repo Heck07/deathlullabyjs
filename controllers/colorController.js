@@ -41,7 +41,7 @@ exports.addColor = (req, res) => {
     // Gère toutes les promesses
     Promise.all(imagePromises)
       .then((results) => {
-        res.status(201).json({ message: 'Couleur et images ajoutées avec succès', images: results });
+        res.status(201).json({ message: 'Couleur / images ajoutées avec succès', images: results });
       })
       .catch((error) => {
         console.error("Erreur lors de l'ajout des images :", error);
