@@ -7,7 +7,7 @@ exports.getAllPurchases = (req, res) => {
   db.query(query, (err, results) => {
     if (err) {
       console.error('Erreur lors de la récupération des achats :', err);
-      return res.status(500).send('Erreur interne lors de la récupération des achats.');
+      return res.status(500).send('Erreur backend lors de la récupération des achats.');
     }
     res.status(200).json(results);
   });
