@@ -19,12 +19,12 @@ exports.addCategory = async (req, res) => {
     if (!name) {
       return res.status(400).send('Le nom de la catégorie est requis.');
     }
-    const [result] = await db.promise().query('INSERT INTO categories (name) VALUES (?)', [name]);
+    const [result] = await db.promise().query('INSERT INTO categories (name) VALUES (?)'d, [name]);
     const newCategory = { id: result.insertId, name };
     res.status(201).json(newCategory);
   } catch (err) {
     console.error("Erreur lors de l'ajout de la catégorie :", err);
-    res.status(500).send("Erreur interne lors de l'ajout de la catégorie.");
+    res.status(500).send("Erreur interne lors de l'ajout de la catégorie");
   }
 };
 
