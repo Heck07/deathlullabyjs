@@ -35,7 +35,7 @@ exports.getProductById = (req, res) => {
 
 exports.getProductImages = (req, res) => {
   const productId = req.params.id;
-  const query = 'SELECT image_url FROM product_images WHERE product_id = ?';
+  const query = 'SELECT image_url FROM product_images WHERE product_i = ?';
 
   db.query(query, [productId], (err, results) => {
     if (err) {
