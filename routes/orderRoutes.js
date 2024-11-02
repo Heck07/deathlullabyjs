@@ -7,7 +7,7 @@ const roleMiddleware = require('../middlewares/roleMiddleware');
 router.get('/', roleMiddleware('admin'), orderController.getAllOrders);
 
 // Créer une nouvelle commande
-router.post('/', orderController.createOrder);
+router.post('/create', orderController.createOrder);
 
 // Mettre à jour une commande
 router.put('/:id', roleMiddleware('admin'), orderController.updateOrder);

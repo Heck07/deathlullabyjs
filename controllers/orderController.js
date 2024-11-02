@@ -1,54 +1,31 @@
-// orderController.js
+// controllers/orderController.js
 const db = require('../config/database');
 
-// Récupérer toutes les commandes
-exports.getAllOrders = (req, res) => {
-  const query = 'SELECT * FROM orders';
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error('Erreur lors de la récupération des commandes :', err);
-      return res.status(500).send('Erreur interne lors de la récupération des commandes.');
-    }
-    res.status(200).json(results);
-  });
-};
+exports.createOrder = async (req, res) => {
+  const { userId, email, address, items, paymentIntentId, orderTotal } = req.body;
 
-// Créer une nouvelle commande
-exports.createOrder = (req, res) => {
-  const { clientId, total, status } = req.body;
-  const query = 'INSERT INTO orders (client_id, total, status) VALUES (?, ?, ?)';
-  db.query(query, [clientId, total, status], (err, result) => {
-    if (err) {
-      console.error('Erreur lors de la création de la commande :', err);
-      return res.status(500).send('Erreur interne lors de la création de la commande.');
-    }
-    res.status(201).send('Commande créée avec succès.' + result);
-  });
-};
+  try {
+    // Insérer la commande dans la table `orders`
+    const [orderResult] = await db.promise().query(`
+      INSERT INTO orders (user_id, email, street_address, postal_code, city, country, payment_intent_id, order_total)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [userId, email, address.street, address.postalCode, address.city, address.country, paymentIntentId, orderTotal]);
 
-// Mettre à jour une commande
-exports.updateOrder = (req, res) => {
-  const orderId = req.params.id;
-  const { status } = req.body;
-  const query = 'UPDATE orders SET status = ? WHERE id = ?';
-  db.query(query, [status, orderId], (err, result) => {
-    if (err) {
-      console.error('Erreur lors de la mise à jour de la commande :', err);
-      return res.status(500).send('Erreur interne lors de la mise à jour de la commande.');
-    }
-    res.status(200).send('Commande mise à jour avec succès.'+ result);
-  });
-};
+    const orderId = orderResult.insertId;
 
-// Supprimer une commande
-exports.deleteOrder = (req, res) => {
-  const orderId = req.params.id;
-  const query = 'DELETE FROM orders WHERE id = ?';
-  db.query(query, [orderId], (err, result) => {
-    if (err) {
-      console.error('Erreur lors de la suppression de la commande :', err);
-      return res.status(500).send('Erreur interne lors de la suppression de la commande.');
-    }
-    res.status(200).send('Commande supprimée avec succès.'+ result);
-  });
+    // Préparer les articles de commande pour l'insertion en masse
+    const orderItems = items.map(item => [
+      orderId, item.productId, item.color, item.size, item.quantity, item.price
+    ]);
+
+    // Insérer les articles dans la table `order_items`
+    await db.promise().query(`
+      INSERT INTO order_items (order_id, product_id, color, size, quantity, price)
+      VALUES ?
+    `, [orderItems]);
+
+    res.status(201).json({ message: 'Commande créée avec succès' });
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la création de la commande', error });
+  }
 };
