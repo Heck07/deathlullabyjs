@@ -2,11 +2,11 @@
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
+const colorController = require('../controllers/colorController');
+const sizeController = require('../controllers/sizeController');
 const authenticateToken = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 const upload = require('../config/uploadConfig'); // Importer le middleware Multer configuré
-const colorController = require('../controllers/colorController');
-const sizeController = require('../controllers/sizeController');
 
 router.get('/:id', productController.getProductById);
 
