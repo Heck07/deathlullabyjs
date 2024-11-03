@@ -5,6 +5,12 @@ exports.createOrder = async (req, res) => {
   const { userId, email, shippingAddress, billingAddress, items, paymentIntentId, orderTotal } = req.body;
 
   try {
+    
+    // Vérifiez que `paymentIntentId` est fourni
+    if (!paymentIntentId) {
+      return res.status(400).json({ message: 'paymentIntentId manquant' });
+    }
+
     // Vérifier le paiement avec Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
     if (paymentIntent.status !== 'succeeded') {
