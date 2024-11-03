@@ -85,8 +85,11 @@ exports.createPaymentIntent = async (req, res) => {
       payment_method_types: ['card'],
     });
 
-    res.status(200).json({ paymentIntentId: paymentIntent.id });
-  } catch (error) {
+    res.status(200).json({
+      paymentIntentId: paymentIntent.id,
+      clientSecret: paymentIntent.client_secret // Renvoie le client_secret
+    });
+    } catch (error) {
     console.error('Erreur lors de la création du paymentIntent:', error);
     res.status(500).json({ message: 'Erreur lors de la création du paymentIntent' });
   }
