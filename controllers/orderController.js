@@ -13,7 +13,12 @@ exports.createOrder = async (req, res) => {
 
     // Vérifier le paiement avec Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    if (paymentIntent.status !== 'succeeded') {
+    if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+      // Affichez des informations détaillées si le paiement échoue
+      console.error(`Échec du paiement : Statut - ${paymentIntent ? paymentIntent.status : 'Non trouvé'}`);
+      if (paymentIntent && paymentIntent.last_payment_error) {
+        console.error('Détails de l\'erreur :', paymentIntent.last_payment_error);
+      }
       return res.status(400).json({ message: 'Le paiement a échoué.' });
     }
 
@@ -66,7 +71,7 @@ exports.createOrder = async (req, res) => {
     res.status(201).json({ message: 'Commande créée avec succès', orderId });
   } catch (error) {
     console.error('Erreur lors de la création de la commande:', error);
-    res.status(500).json({ message: 'Erreur lors de la création de la commande', error });
+    res.status(500).json({ message: 'Erreur lors de la commande', error });
   }
 };
 
