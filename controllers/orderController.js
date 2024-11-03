@@ -47,8 +47,8 @@ exports.createOrder = async (req, res) => {
       billingAddress.postalCode,
       billingAddress.city,
       billingAddress.country,
+      orderTotal,
       paymentIntentId,
-      orderTotal
     ]);
 
     const orderId = orderResult.insertId;
