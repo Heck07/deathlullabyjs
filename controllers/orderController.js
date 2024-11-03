@@ -27,9 +27,9 @@ exports.createOrder = async (req, res) => {
       INSERT INTO orders (
         user_id, email, shipping_first_name, shipping_last_name, shipping_phone, 
         shipping_street_address, shipping_postal_code, shipping_city, shipping_country, 
-        billing_first_name, billing_last_name, billing_phone, billing_street_address, 
+        billing_first_name, billing_last_name, billing_street_address, 
         billing_postal_code, billing_city, billing_country, payment_intent_id, order_total
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       userId,
       email,
