@@ -5,7 +5,7 @@ exports.createOrder = async (req, res) => {
   const { userId, email, shippingAddress, billingAddress, items, paymentIntentId, orderTotal } = req.body;
 
   try {
-    
+
     // Vérifiez que `paymentIntentId` est fourni
     if (!paymentIntentId) {
       return res.status(400).json({ message: 'paymentIntentId manquant' });
@@ -67,5 +67,22 @@ exports.createOrder = async (req, res) => {
   } catch (error) {
     console.error('Erreur lors de la création de la commande:', error);
     res.status(500).json({ message: 'Erreur lors de la création de la commande', error });
+  }
+};
+
+exports.createPaymentIntent = async (req, res) => {
+  try {
+    const { amount } = req.body; // Total de la commande en centimes
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'eur', // Par exemple, en euros
+      payment_method_types: ['card'],
+    });
+
+    res.status(200).json({ paymentIntentId: paymentIntent.id });
+  } catch (error) {
+    console.error('Erreur lors de la création du paymentIntent:', error);
+    res.status(500).json({ message: 'Erreur lors de la création du paymentIntent' });
   }
 };
