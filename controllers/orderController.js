@@ -42,13 +42,12 @@ exports.createOrder = async (req, res) => {
       shippingAddress.country,
       billingAddress.firstName,
       billingAddress.lastName,
-      billingAddress.phone,
       billingAddress.street,
       billingAddress.postalCode,
       billingAddress.city,
       billingAddress.country,
-      orderTotal,
       paymentIntentId,
+      orderTotal,
     ]);
 
     const orderId = orderResult.insertId;
