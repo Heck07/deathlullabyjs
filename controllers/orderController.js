@@ -2,7 +2,7 @@ const db = require('../config/database');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 exports.createOrder = async (req, res) => {
-  const { userId, email, shippingAddress, billingAddress, items, paymentIntentId, orderTotal } = req.body;
+  const { userId, email, shippingAddress, billingAddress, items, paymentIntentId, orderTotal, useShippingAsBilling } = req.body;
 
   try {
 
@@ -22,6 +22,8 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ message: 'Le paiement a échoué.' });
     }
 
+    const billing = useShippingAsBilling ? shippingAddress : billingAddress;
+
     // Insérer la commande dans la table orders
     const [orderResult] = await db.promise().query(`
       INSERT INTO orders (
@@ -40,12 +42,12 @@ exports.createOrder = async (req, res) => {
       shippingAddress.postalCode,
       shippingAddress.city,
       shippingAddress.country,
-      billingAddress.firstName,
-      billingAddress.lastName,
-      billingAddress.street,
-      billingAddress.postalCode,
-      billingAddress.city,
-      billingAddress.country,
+      billing.firstName,
+      billing.lastName,
+      billing.street,
+      billing.postalCode,
+      billing.city,
+      billing.country,
       paymentIntentId,
       orderTotal,
     ]);
