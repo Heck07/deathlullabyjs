@@ -1,5 +1,35 @@
 const db = require('../config/database');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+
+async function generateSignupToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+async function sendConfirmationEmail(email, orderId) {
+  const transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: 'ton-email@example.com',
+    to: email,
+    subject: 'Confirmation de votre commande',
+    html: `
+      <h1>Merci pour votre commande !</h1>
+      <p>Votre numéro de commande est : <strong>${orderId}</strong>.</p>
+      <p>Pour un suivi facile et pour bénéficier d’avantages supplémentaires, <a href="https://tonsite.com/signup?token=${signupToken}">créez un compte ici</a>.</p>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
 
 exports.createOrder = async (req, res) => {
   const { userId, email, shippingAddress, billingAddress, items, paymentIntentId, orderTotal, useShippingAsBilling } = req.body;
@@ -20,6 +50,12 @@ exports.createOrder = async (req, res) => {
         console.error('Détails de l\'erreur :', paymentIntent.last_payment_error);
       }
       return res.status(400).json({ message: 'Le paiement a échoué.' });
+    }
+
+    let signupToken = null;
+    if (!userId) {
+      signupToken = await generateSignupToken();
+      await db.promise().query('INSERT INTO temp_users (email, signupToken) VALUES (?, ?)', [email, signupToken]);
     }
 
     const billing = useShippingAsBilling ? shippingAddress : billingAddress;
@@ -68,6 +104,9 @@ exports.createOrder = async (req, res) => {
       INSERT INTO order_items (order_id, product_id, color, size, quantity, price) 
       VALUES ?
     `, [itemInserts]);
+
+    // Envoie l'email de confirmation
+    await sendConfirmationEmail(email, orderId, signupToken);
 
     res.status(201).json({ message: 'Commande créée avec succès', orderId });
   } catch (error) {
