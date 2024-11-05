@@ -182,3 +182,17 @@ exports.getOrderDetails = async (req, res) => {
     res.status(500).json({ message: 'Erreur interne lors de la récupération des détails de la commande.' });
   }
 };
+
+exports.getOrderItems = async (req, res) => {
+  const orderId = req.params.id;
+
+  try {
+    // Récupérer les `order_items` pour la commande donnée
+    const [items] = await db.promise().query('SELECT * FROM order_items WHERE order_id = ?', [orderId]);
+
+    res.status(200).json({ items });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des items de la commande:', error);
+    res.status(500).json({ message: 'Erreur interne lors de la récupération des items de la commande.' });
+  }
+};

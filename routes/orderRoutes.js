@@ -13,5 +13,7 @@ router.get('/orders', authenticateToken, roleMiddleware('admin'), orderControlle
 
 router.get('/orders/:id', authenticateToken, roleMiddleware('admin'), orderController.getOrderDetails);
 
+router.get('/orders/:id/items', authenticateToken, roleMiddleware('admin'), orderController.getOrderItems);
+
 
 module.exports = router;
