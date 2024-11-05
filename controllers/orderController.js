@@ -7,7 +7,7 @@ async function generateSignupToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-async function sendConfirmationEmail(email, orderId, signupToken, items) {
+async function sendConfirmationEmail(email, orderId, signupToken, items, orderTotal) {
   const transporter = nodemailer.createTransport({
     service: 'Gmail',
     auth: {
