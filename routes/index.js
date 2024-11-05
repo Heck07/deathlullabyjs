@@ -10,6 +10,7 @@ const statsRoutes = require('./statsRoutes');
 const roleRoutes = require('./roleRoutes');
 const permissionsRoutes = require('./permissionsRoutes');
 const authRoutes = require('./authRoutes');
+const dashboardRoutes = require('./dashboardRoutes')
 
 
 router.use('/users', userRoutes);
@@ -21,5 +22,7 @@ router.use('/stats', statsRoutes);
 router.use('/roles', roleRoutes);
 router.use('/permissions', permissionsRoutes);
 router.use('/auth', authRoutes);
+router.use('/dashboard', dashboardRoutes);
+
 
 module.exports = router;
