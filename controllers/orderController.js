@@ -7,7 +7,7 @@ async function generateSignupToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-async function sendConfirmationEmail(email, orderId, signupToken) {
+async function sendConfirmationEmail(email, orderId, signupToken, items) {
   const transporter = nodemailer.createTransport({
     service: 'Gmail',
     auth: {
@@ -16,6 +16,14 @@ async function sendConfirmationEmail(email, orderId, signupToken) {
     },
   });
 
+  // Crée une liste HTML pour les produits commandés
+  const itemsListHtml = items.map(item => `
+    <li>
+      <strong>${item.productId}</strong> - ${item.color.color_name}, Taille: ${item.size} <br>
+      Quantité: ${item.quantity}, Prix: ${item.price} €
+    </li>
+  `).join('');
+
   const mailOptions = {
     from: 'ton-email@example.com',
     to: email,
@@ -23,7 +31,10 @@ async function sendConfirmationEmail(email, orderId, signupToken) {
     html: `
       <h1>Merci pour votre commande !</h1>
       <p>Votre numéro de commande est : <strong>${orderId}</strong>.</p>
-      <p>Pour un suivi facile et pour bénéficier d’avantages supplémentaires, <a href="localhost:8080/signup?token=${signupToken}">créez un compte ici</a>.</p>
+      <h2>Détails de votre commande :</h2>
+      <ul>${itemsListHtml}</ul>
+      <p>Total : <strong>${orderTotal} €</strong></p>
+      <p>Pour un suivi facile et pour bénéficier d’avantages supplémentaires, <a href="http://localhost:8080/signup?token=${signupToken}">créez un compte ici</a>.</p>
     `,
   };
 
@@ -106,7 +117,7 @@ exports.createOrder = async (req, res) => {
     `, [itemInserts]);
 
     // Envoie l'email de confirmation
-    await sendConfirmationEmail(email, orderId, signupToken);
+    await sendConfirmationEmail(email, orderId, signupToken, items, orderTotal);
 
     res.status(201).json({ message: 'Commande créée avec succès', orderId });
   } catch (error) {
