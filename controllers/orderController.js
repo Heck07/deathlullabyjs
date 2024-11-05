@@ -118,6 +118,7 @@ exports.createOrder = async (req, res) => {
     `, [itemInserts]);
 
     // Envoie l'email de confirmation
+    console.log('Contenu des items :', items);
     await sendConfirmationEmail(email, orderId, signupToken, items, orderTotal);
 
     res.status(201).json({ message: 'Commande créée avec succès', orderId });
@@ -144,5 +145,40 @@ exports.createPaymentIntent = async (req, res) => {
     } catch (error) {
     console.error('Erreur lors de la création du paymentIntent:', error);
     res.status(500).json({ message: 'Erreur lors de la création du paymentIntent' });
+  }
+};
+
+exports.getAllOrders = async (req, res) => {
+  try {
+    const [orders] = await db.promise().query('SELECT * FROM orders');
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des ordres d\'achat :', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des ordres d\'achat' });
+  }
+};
+
+exports.getOrderDetails = async (req, res) => {
+  const orderId = req.params.id;
+
+  try {
+    // Récupère les informations de base de la commande
+    const [orderRows] = await db.promise().query('SELECT * FROM orders WHERE id = ?', [orderId]);
+    if (orderRows.length === 0) {
+      return res.status(404).json({ message: 'Commande non trouvée.' });
+    }
+
+    const order = orderRows[0];
+
+    // Récupère les produits associés à la commande
+    const [itemsRows] = await db.promise().query('SELECT * FROM order_items WHERE order_id = ?', [orderId]);
+
+    res.status(200).json({
+      order,
+      items: itemsRows,
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des détails de la commande:', error);
+    res.status(500).json({ message: 'Erreur interne lors de la récupération des détails de la commande.' });
   }
 };
