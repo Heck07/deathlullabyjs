@@ -4,8 +4,6 @@ const db = require('../config/database');
 exports.getStats = async (req, res) => {
   try {
     // Récupérer le nombre de visites (hypothèse d'une table `visits` pour les visites)
-    const [visits] = await db.promise().query('SELECT COUNT(*) AS visitsCount FROM visits');
-
     // Récupérer le nombre total de commandes
     const [orders] = await db.promise().query('SELECT COUNT(*) AS ordersCount FROM orders');
 
@@ -13,7 +11,6 @@ exports.getStats = async (req, res) => {
     const [revenue] = await db.promise().query('SELECT SUM(order_total) AS totalRevenue FROM orders');
 
     res.status(200).json({
-      visitsCount: visits[0].visitsCount || 0,
       ordersCount: orders[0].ordersCount || 0,
       totalRevenue: revenue[0].totalRevenue || 0
     });
