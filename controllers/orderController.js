@@ -19,13 +19,14 @@ async function sendConfirmationEmail(email, orderId, signupToken, items, orderTo
   // Crée une liste HTML pour les produits commandés
   const itemsListHtml = items.map(item => `
     <li>
-      <strong>${item.productId}</strong> - ${item.color.color_name}, Taille: ${item.size} <br>
+      <img src="${item.image}" alt="${item.productId}" style="width: 50px; height: 50px; margin-right: 10px; vertical-align: middle;" />
+      <strong>${item.name}</strong> - ${item.color}, Taille: ${item.size} <br>
       Quantité: ${item.quantity}, Prix: ${item.price} €
     </li>
   `).join('');
 
   const mailOptions = {
-    from: 'ton-email@example.com',
+    from: 'deathlullaby@support.com',
     to: email,
     subject: 'Confirmation de votre commande',
     html: `
