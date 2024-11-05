@@ -103,3 +103,20 @@ exports.updateUserPassword = async (req, res) => {
   }
 };
 
+exports.getTempUserEmail = async (req, res) => {
+  const { token } = req.query;
+
+  try {
+    const [rows] = await db.promise().query('SELECT email FROM temp_users WHERE signupToken = ?', [token]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Token invalide ou expiré.' });
+    }
+
+    const email = rows[0].email;
+    res.status(200).json({ email });
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'email:', error);
+    res.status(500).json({ message: 'Erreur interne lors de la récupération de l\'email.' });
+  }
+};

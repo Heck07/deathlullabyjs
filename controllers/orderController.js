@@ -23,7 +23,7 @@ async function sendConfirmationEmail(email, orderId, signupToken) {
     html: `
       <h1>Merci pour votre commande !</h1>
       <p>Votre numéro de commande est : <strong>${orderId}</strong>.</p>
-      <p>Pour un suivi facile et pour bénéficier d’avantages supplémentaires, <a href="https://tonsite.com/signup?token=${signupToken}">créez un compte ici</a>.</p>
+      <p>Pour un suivi facile et pour bénéficier d’avantages supplémentaires, <a href="localhost:8080/signup?token=${signupToken}">créez un compte ici</a>.</p>
     `,
   };
 

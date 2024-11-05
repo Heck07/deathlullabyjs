@@ -10,6 +10,7 @@ router.get('/', authMiddleware, roleMiddleware(['admin']), userController.getAll
 router.put('/:id', authMiddleware, roleMiddleware(['admin']), userController.updateUser);
 router.delete('/:id', authMiddleware, roleMiddleware(['admin']), userController.deleteUser);
 
+router.get('/temp-users', userController.getTempUserEmail);
 
 router.get('/me', authenticateToken, userController.getUserDetails);
 
