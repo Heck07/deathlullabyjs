@@ -102,43 +102,52 @@ exports.getAllProducts = (req, res) => {
 
 
 // AJOUTER UN Produit
-exports.addProduct = (req, res) => {
-  const { name, price, categoryId } = req.body;
+exports.addProduct = async (req, res) => {
+  const { name, price, categoryId, colorName, colorHex } = req.body;
+  const files = req.files;
 
-  // Vérifie que tous les champs obligatoires sont présents
-  if (!name || !price || !categoryId || !req.files || req.files.length === 0) {
+  if (!name || !price || !categoryId || !files || files.length === 0) {
     return res.status(400).send("Tous les champs, y compris au moins une image, sont requis.");
   }
 
-  // Insère le produit
-  const productQuery = 'INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)';
-  db.query(productQuery, [name, price, categoryId], (err, result) => {
-    if (err) {
-      console.error("Erreur lors de l'ajout du produit :", err);
-      return res.status(500).send("Erreur lors de l'ajout du produit.");
-    }
+  try {
+    // Ajout du produit
+    const productQuery = 'INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)';
+    const productResult = await db.query(productQuery, [name, price, categoryId]);
+    const productId = productResult.insertId;
 
-    const productId = result.insertId;
+    // Ajout de la couleur et des images liées à la couleur
+    if (colorName && colorHex) {
+      const colorQuery = 'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)';
+      const colorResult = await db.query(colorQuery, [productId, colorName, colorHex]);
+      const colorId = colorResult.insertId;
 
-    // Insère chaque image
-    const imageQueries = req.files.map(file => {
-      return new Promise((resolve, reject) => {
-        const imageQuery = 'INSERT INTO product_images (product_id, image_url) VALUES (?, ?)';
-        db.query(imageQuery, [productId, file.path], (err) => {
-          if (err) reject(err);
-          else resolve();
+      // Associez chaque image à colorId et productId
+      const imagePromises = files.map(file => {
+        return new Promise((resolve, reject) => {
+          const imageQuery = 'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)';
+          db.query(imageQuery, [productId, file.path, colorId], (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
         });
       });
-    });
 
-    // Gère les promesses d'insertion d'images
-    Promise.all(imageQueries)
-      .then(() => res.status(201).send({ id: productId, name, price, categoryId, images: req.files.map(f => f.path) }))
-      .catch(error => {
-        console.error("Erreur lors de l'ajout d'images :", error);
-        res.status(500).send("Erreur lors de l'ajout d'images.");
-      });
-  });
+      await Promise.all(imagePromises);
+    }
+
+    res.status(201).send({ 
+      id: productId, 
+      name, 
+      price, 
+      categoryId, 
+      color: { colorId, colorName, colorHex }, 
+      images: files.map(f => f.path)
+    });
+  } catch (error) {
+    console.error("Erreur lors de l'ajout du produit et de la couleur :", error);
+    res.status(500).send("Erreur lors de l'ajout du produit et de la couleur.");
+  }
 };
 
 // Mettre a jour un produit
