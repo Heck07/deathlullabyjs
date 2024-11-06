@@ -102,73 +102,70 @@ exports.getAllProducts = (req, res) => {
 
 
 // AJOUTER UN Produit
-exports.addProduct = async (req, res) => {
+exports.addProduct = (req, res) => {
   const { name, price, categoryId, color_name, color_hex } = req.body;
 
-  // Vérifiez que tous les champs obligatoires sont présents
-  if (!name || !price || !categoryId || !color_name || !color_hex || !req.files || req.files.length === 0) {
-    return res.status(400).send("Tous les champs, y compris une couleur et au moins une image, sont requis.");
+  if (!name || !price || !categoryId) {
+    return res.status(400).send("Les champs 'name', 'price' et 'categoryId' sont obligatoires.");
   }
 
-  try {
-    // Insère le produit et récupère son ID
-    const [productResult] = await db.promise().query(
-      'INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)',
-      [name, price, categoryId]
-    );
-    const productId = productResult.insertId;
+  // Étape 1 : Insérer le produit
+  const productQuery = 'INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)';
+  db.query(productQuery, [name, price, categoryId], (err, result) => {
+    if (err) {
+      console.error("Erreur lors de l'ajout du produit :", err);
+      return res.status(500).send("Erreur lors de l'ajout du produit.");
+    }
 
-    // Insère la couleur pour le produit et récupère son ID
-    const [colorResult] = await db.promise().query(
-      'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
-      [productId, color_name, color_hex]
-    );
-    const colorId = colorResult.insertId;
+    const productId = result.insertId;
 
-    // Promesses de téléchargement et d'insertion des images
-    const imageUploadPromises = req.files.map(file => {
-      return new Promise((resolve, reject) => {
-        // Téléchargement vers Cloudinary
-        cloudinary.uploader.upload(file.path, async (error, result) => {
-          if (error) {
-            console.error("Erreur lors du téléchargement de l'image :", error);
-            reject(error);
-          } else {
-            // Insère l'URL de l'image avec le lien à la couleur dans `product_images`
-            try {
-              await db.promise().query(
-                'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
-                [productId, result.secure_url, colorId]
-              );
-              resolve(result.secure_url);
-            } catch (dbError) {
-              console.error("Erreur lors de l'insertion de l'image dans la base de données :", dbError);
-              reject(dbError);
-            }
-          }
+    // Étape 2 : Ajouter la couleur associée
+    const colorQuery = 'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)';
+    db.query(colorQuery, [productId, color_name, color_hex], (err, colorResult) => {
+      if (err) {
+        console.error("Erreur lors de l'ajout de la couleur :", err);
+        return res.status(500).send("Erreur lors de l'ajout de la couleur.");
+      }
+
+      const colorId = colorResult.insertId;
+
+      // Étape 3 : Ajouter les images à Cloudinary et insérer dans la base de données
+      if (req.files && req.files.length > 0) {
+        const imagePromises = req.files.map(file => {
+          return new Promise((resolve, reject) => {
+            cloudinary.uploader.upload(file.path, (error, uploadResult) => {
+              if (error) {
+                console.error("Erreur lors de l'upload sur Cloudinary :", error);
+                reject(error);
+              } else {
+                const imageQuery = 'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)';
+                db.query(imageQuery, [productId, uploadResult.secure_url, colorId], (err) => {
+                  if (err) {
+                    console.error("Erreur lors de l'insertion de l'image dans la base de données :", err);
+                    reject(err);
+                  } else {
+                    resolve(uploadResult.secure_url);
+                  }
+                });
+              }
+            });
+          });
         });
-      });
-    });
 
-    // Exécute toutes les promesses de téléchargement d'images
-    const uploadedImages = await Promise.all(imageUploadPromises);
-
-    // Répond avec succès une fois que toutes les images ont été traitées
-    res.status(201).json({
-      message: "Produit, couleur et images ajoutés avec succès",
-      product: {
-        id: productId,
-        name,
-        price,
-        categoryId,
-        color: { id: colorId, name: color_name, hex_code: color_hex },
-        images: uploadedImages
+        // Exécuter toutes les promesses d'image
+        Promise.all(imagePromises)
+          .then((imageUrls) => {
+            res.status(201).json({ message: 'Produit, couleur et images ajoutés avec succès', images: imageUrls });
+          })
+          .catch((error) => {
+            console.error("Erreur lors de l'ajout des images :", error);
+            res.status(500).json({ error: "Erreur serveur lors de l'ajout des images" });
+          });
+      } else {
+        res.status(201).json({ message: 'Produit et couleur ajoutés sans images' });
       }
     });
-  } catch (error) {
-    console.error("Erreur lors de l'ajout du produit, de la couleur et des images :", error);
-    res.status(500).json({ message: "Erreur lors de l'ajout du produit, de la couleur et des images" });
-  }
+  });
 };
 
 // Mettre a jour un produit
