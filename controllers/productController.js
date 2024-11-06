@@ -102,90 +102,73 @@ exports.getAllProducts = (req, res) => {
 
 
 // AJOUTER UN Produit
-exports.addProduct = (req, res) => {
-  res.header("Access-Control-Allow-Origin", "*");  // Utilisez "*" ou spécifiez votre origine
-  res.header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+exports.addProduct = async (req, res) => {
   const { name, price, categoryId, color_name, color_hex } = req.body;
-  const images = req.files || [];
 
-  // Vérifie les champs obligatoires
-  if (!name || !price || !categoryId || images.length === 0) {
-    return res.status(400).send("Tous les champs, y compris au moins une image, sont requis.");
+  // Vérifiez que tous les champs obligatoires sont présents
+  if (!name || !price || !categoryId || !color_name || !color_hex || !req.files || req.files.length === 0) {
+    return res.status(400).send("Tous les champs, y compris une couleur et au moins une image, sont requis.");
   }
 
-  // Insère le produit
-  db.query(
-    'INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)',
-    [name, price, categoryId],
-    (err, productResult) => {
-      if (err) {
-        console.error("Erreur lors de l'ajout du produit :", err);
-        return res.status(500).send("Erreur lors de l'ajout du produit.");
-      }
+  try {
+    // Insère le produit et récupère son ID
+    const [productResult] = await db.promise().query(
+      'INSERT INTO products (name, price, category_id) VALUES (?, ?, ?)',
+      [name, price, categoryId]
+    );
+    const productId = productResult.insertId;
 
-      const productId = productResult.insertId;
+    // Insère la couleur pour le produit et récupère son ID
+    const [colorResult] = await db.promise().query(
+      'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
+      [productId, color_name, color_hex]
+    );
+    const colorId = colorResult.insertId;
 
-      // Insère la couleur liée au produit
-      db.query(
-        'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)',
-        [productId, color_name, color_hex],
-        (err, colorResult) => {
-          if (err) {
-            console.error("Erreur lors de l'ajout de la couleur :", err);
-            return res.status(500).send("Erreur lors de l'ajout de la couleur.");
+    // Promesses de téléchargement et d'insertion des images
+    const imageUploadPromises = req.files.map(file => {
+      return new Promise((resolve, reject) => {
+        // Téléchargement vers Cloudinary
+        cloudinary.uploader.upload(file.path, async (error, result) => {
+          if (error) {
+            console.error("Erreur lors du téléchargement de l'image :", error);
+            reject(error);
+          } else {
+            // Insère l'URL de l'image avec le lien à la couleur dans `product_images`
+            try {
+              await db.promise().query(
+                'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
+                [productId, result.secure_url, colorId]
+              );
+              resolve(result.secure_url);
+            } catch (dbError) {
+              console.error("Erreur lors de l'insertion de l'image dans la base de données :", dbError);
+              reject(dbError);
+            }
           }
+        });
+      });
+    });
 
-          const colorId = colorResult.insertId;
+    // Exécute toutes les promesses de téléchargement d'images
+    const uploadedImages = await Promise.all(imageUploadPromises);
 
-          // Télécharge et insère chaque image
-          const imageUrls = [];
-          let imageCount = 0;
-
-          images.forEach((file) => {
-            cloudinary.uploader.upload(file.path, (error, result) => {
-              if (error) {
-                console.error("Erreur lors du téléchargement sur Cloudinary :", error);
-                if (imageCount === images.length - 1) {
-                  return res.status(500).json({ error: "Erreur lors du téléchargement des images." });
-                }
-              } else {
-                // Insère chaque URL dans la base de données
-                db.query(
-                  'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)',
-                  [productId, result.secure_url, colorId],
-                  (err) => {
-                    if (err) {
-                      console.error("Erreur lors de l'insertion de l'image :", err);
-                      if (imageCount === images.length - 1) {
-                        return res.status(500).json({ error: "Erreur lors de l'insertion des images." });
-                      }
-                    } else {
-                      imageUrls.push(result.secure_url);
-                      imageCount++;
-                      if (imageCount === images.length) {
-                        res.status(201).json({
-                          message: "Produit, couleur et images ajoutés avec succès",
-                          product: {
-                            id: productId,
-                            name,
-                            price,
-                            categoryId,
-                            color: { id: colorId, color_name, hex_code },
-                            images: imageUrls,
-                          },
-                        });
-                      }
-                    }
-                  }
-                );
-              }
-            });
-          });
-        }
-      );
-    }
-  );
+    // Répond avec succès une fois que toutes les images ont été traitées
+    res.status(201).json({
+      message: "Produit, couleur et images ajoutés avec succès",
+      product: {
+        id: productId,
+        name,
+        price,
+        categoryId,
+        color: { id: colorId, name: color_name, hex_code: color_hex },
+        images: uploadedImages
+      }
+    });
+  } catch (error) {
+    console.error("Erreur lors de l'ajout du produit, de la couleur et des images :", error);
+    res.status(500).json({ message: "Erreur lors de l'ajout du produit, de la couleur et des images" });
+  }
 };
 
 // Mettre a jour un produit
