@@ -9,7 +9,6 @@ exports.addColor = (req, res) => {
   // Insère la couleur dans la base de données
   db.query('INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)', [productId, color_name, hex_code], (err, colorResult) => {
     if (err) {
-      console.error("Erreur lors de l'ajout de la couleur :", err);
       return res.status(500).json({ error: "Erreur serveur lors de l'ajout de la couleur" });
     }
 
