@@ -128,21 +128,19 @@ exports.addProduct = (req, res) => {
         console.error("Erreur lors de l'ajout de la couleur :", err);
         return res.status(500).send("Erreur lors de l'ajout de la couleur.");
       }
-      console.log("Images reçues pour le produit :", req.files);
 
       const colorId = colorResult.insertId;
-
+      console.log(req.files)
       // Étape 3 : Ajouter les images
-      if (req.files && req.files.length > 0) {
-        const imagePromises = req.files.map(file => {
+      const images = req.files || [];
+      if (images.length > 0) {
+        const imagePromises = images.map(file => {
           return new Promise((resolve, reject) => {
-            console.log("Tentative d'upload de l'image sur Cloudinary : ", file.path);
             cloudinary.uploader.upload(file.path, (error, uploadResult) => {
               if (error) {
                 console.error("Erreur lors de l'upload sur Cloudinary :", error);
                 reject(error);
               } else {
-                console.log("Upload réussi :", uploadResult.secure_url);
                 const imageQuery = 'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)';
                 db.query(imageQuery, [productId, uploadResult.secure_url, colorId], (err) => {
                   if (err) {
@@ -159,7 +157,6 @@ exports.addProduct = (req, res) => {
 
         Promise.all(imagePromises)
           .then((imageUrls) => {
-            console.log("Images ajoutées avec succès :", imageUrls);
             res.status(201).json({ message: 'Produit, couleur et images ajoutés avec succès', images: imageUrls });
           })
           .catch((error) => {
