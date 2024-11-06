@@ -80,9 +80,38 @@ exports.updateColor = (req, res) => {
 
 exports.deleteColor = (req, res) => {
   const { colorId } = req.params;
-  const query = 'DELETE FROM colors WHERE id = ?';
-  db.query(query, [colorId], (err) => {
-    if (err) return res.status(500).send('Error deleting color');
-    res.status(200).send('Color deleted successfully');
+
+  // Étape 1 : Récupérer les URLs des images associées à cette couleur
+  const getImageUrlsQuery = 'SELECT image_url FROM product_images WHERE color_id = ?';
+  db.query(getImageUrlsQuery, [colorId], (err, results) => {
+    if (err) return res.status(500).send('Error retrieving images for color');
+
+    const imageUrls = results.map(row => row.image_url);
+
+    // Étape 2 : Supprimer les images de Cloudinary
+    const deleteImagePromises = imageUrls.map((url) => {
+      const publicId = url.split('/').pop().split('.')[0]; // Récupère le public_id de l'URL
+      return cloudinary.uploader.destroy(publicId);
+    });
+
+    Promise.all(deleteImagePromises)
+      .then(() => {
+        // Étape 3 : Supprimer les entrées des images associées dans `product_images`
+        const deleteImagesQuery = 'DELETE FROM product_images WHERE color_id = ?';
+        db.query(deleteImagesQuery, [colorId], (err) => {
+          if (err) return res.status(500).send('Error deleting images from database');
+
+          // Étape 4 : Supprimer la couleur de `colors`
+          const deleteColorQuery = 'DELETE FROM colors WHERE id = ?';
+          db.query(deleteColorQuery, [colorId], (err) => {
+            if (err) return res.status(500).send('Error deleting color');
+            res.status(200).send('Color and associated images deleted successfully');
+          });
+        });
+      })
+      .catch((error) => {
+        console.error("Error deleting images from Cloudinary:", error);
+        res.status(500).send("Error deleting images from Cloudinary");
+      });
   });
 };
