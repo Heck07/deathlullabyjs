@@ -7,46 +7,52 @@ exports.addColor = (req, res) => {
   const images = req.files || [];
 
   // Insère la couleur dans la base de données
-  db.query('INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)', [productId, color_name, hex_code], (err, colorResult) => {
-    if (err) {
-      return res.status(500).json({ error: "Erreur serveur lors de l'ajout de la couleur" });
-    }
+  db.query(
+    'INSERT INTO colors (product_id, color_name, hex_code) VALUES (?, ?, ?)', 
+    [productId, color_name, hex_code], 
+    (err, colorResult) => {
+      if (err) {
+        return res.status(500).json({ error: "Erreur serveur lors de l'ajout de la couleur" });
+      }
 
-    const colorId = colorResult.insertId;
+      const colorId = colorResult.insertId;
 
-    // Tableau pour stocker les promesses de téléchargement et d'insertion
-    const imagePromises = images.map((file) => {
-      return new Promise((resolve, reject) => {
-        // Téléchargez chaque image sur Cloudinary
-        cloudinary.uploader.upload(file.path, (error, uploadResult) => {
-          if (error) {
-            console.error("Erreur lors du téléchargement sur Cloudinary :", error);
-            reject(error);
-          } else {
-            // Insère l'URL de l'image dans `product_images`
-            db.query('INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)', [productId, uploadResult.secure_url, colorId], (err) => {
-              if (err) {
-                console.error("Erreur lors de l'insertion de l'image dans la base de données :", err);
-                reject(err);
-              } else {
-                resolve(uploadResult.secure_url);
-              }
-            });
-          }
+      // Tableau pour stocker les promesses de téléchargement et d'insertion
+      const imagePromises = images.map((file) => {
+        return new Promise((resolve, reject) => {
+          cloudinary.uploader.upload(file.path, (error, uploadResult) => {
+            if (error) {
+              console.error("Erreur lors du téléchargement sur Cloudinary :", error);
+              reject(error);
+            } else {
+              db.query(
+                'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)', 
+                [productId, uploadResult.secure_url, colorId], 
+                (err) => {
+                  if (err) {
+                    console.error("Erreur lors de l'insertion de l'image dans la base de données :", err);
+                    reject(err);
+                  } else {
+                    resolve(uploadResult.secure_url);
+                  }
+                }
+              );
+            }
+          });
         });
       });
-    });
 
-    // Gère toutes les promesses
-    Promise.all(imagePromises)
-      .then((results) => {
-        res.status(201).json({ message: 'Couleur / images ajoutées avec succès', images: results });
-      })
-      .catch((error) => {
-        console.error("Erreur lors de l'ajout des images :", error);
-        res.status(500).json({ error: "Erreur serveur lors de l'ajout des images" });
-      });
-  });
+      // Gère toutes les promesses
+      Promise.all(imagePromises)
+        .then((results) => {
+          res.status(201).json({ message: 'Couleur et images ajoutées avec succès', images: results });
+        })
+        .catch((error) => {
+          console.error("Erreur lors de l'ajout des images :", error);
+          res.status(500).json({ error: "Erreur serveur lors de l'ajout des images" });
+        });
+    }
+  );
 };
 
 exports.getColorsByProductId = (req, res) => {
