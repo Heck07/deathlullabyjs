@@ -1,5 +1,7 @@
 // productController.js
 const db = require('../config/database');
+const cloudinary = require('../config/cloudinaryConfig');
+
 
 // Updated getProductById to include colors
 exports.getProductById = (req, res) => {
