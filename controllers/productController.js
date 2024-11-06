@@ -103,6 +103,9 @@ exports.getAllProducts = (req, res) => {
 
 // AJOUTER UN Produit
 exports.addProduct = (req, res) => {
+  res.header("Access-Control-Allow-Origin", "*");  // Utilisez "*" ou spécifiez votre origine
+  res.header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
   const { name, price, categoryId, color_name, color_hex } = req.body;
   const images = req.files || [];
 
