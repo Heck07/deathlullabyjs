@@ -128,6 +128,7 @@ exports.addProduct = (req, res) => {
         console.error("Erreur lors de l'ajout de la couleur :", err);
         return res.status(500).send("Erreur lors de l'ajout de la couleur.");
       }
+      console.log("Images reçues pour le produit :", req.files);
 
       const colorId = colorResult.insertId;
 
