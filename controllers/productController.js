@@ -145,7 +145,7 @@ exports.addProduct = (req, res) => {
                 const imageQuery = 'INSERT INTO product_images (product_id, image_url, color_id) VALUES (?, ?, ?)';
                 db.query(imageQuery, [productId, uploadResult.secure_url, colorId], (err) => {
                   if (err) {
-                    console.error("Erreur lors de l'insertion de l'image dans la base de données :", err);
+                    console.error("Erreur lors de l'insertion de l'image dans la base de données:", err);
                     reject(err);
                   } else {
                     resolve(uploadResult.secure_url);
