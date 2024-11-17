@@ -48,96 +48,59 @@ exports.getProductImages = (req, res) => {
   });
 };
 
-exports.getProductsWithDetails = async (req, res) => {
+
+// Updated getAllProducts to include colors
+exports.getAllProducts = async (req, res) => {
   try {
-    // Récupérer les produits
-    const [products] = await db.promise().query(`SELECT * FROM products`);
+    // Query pour récupérer les produits
+    const productsQuery = `
+      SELECT p.id, p.name, p.price, p.category_id, pi.image_url AS product_image
+      FROM products p
+      LEFT JOIN product_images pi ON p.id = pi.product_id
+    `;
 
-    // Récupérer les couleurs associées
-    const [colors] = await db.promise().query(`SELECT * FROM colors`);
+    // Query pour récupérer les couleurs avec leurs images
+    const colorsQuery = `
+      SELECT c.product_id, c.color_name, c.hex_code, pi.image_url AS color_image
+      FROM colors c
+      LEFT JOIN product_images pi ON c.image_id = pi.id
+    `;
 
-    // Récupérer les images associées
-    const [images] = await db.promise().query(`SELECT * FROM product_images`);
+    const [productResults] = await db.promise().query(productsQuery);
+    const [colorResults] = await db.promise().query(colorsQuery);
 
-    // Structure des données
-    const result = products.map((product) => {
-      const productColors = colors.filter((color) => color.product_id === product.id);
-      const productImages = productColors.map((color) => ({
-        color_id: color.id,
-        hex_code: color.hex_code,
-        images: images
-          .filter((img) => img.color_id === color.id)
-          .map((img) => img.image_url),
-      }));
+    // Regroupement des données
+    const products = productResults.reduce((acc, row) => {
+      const { id, name, price, category_id, product_image } = row;
+      let product = acc.find(p => p.id === id);
 
-      return {
-        ...product,
-        colors: productColors.map((color) => ({
-          id: color.id,
-          hex_code: color.hex_code,
-        })),
-        colorImages: productImages,
-      };
-    });
+      if (!product) {
+        product = { id, name, price, category_id, images: [], colors: [] };
+        acc.push(product);
+      }
 
-    res.status(200).json(result);
-  } catch (error) {
-    console.error("Erreur lors de la récupération des produits :", error);
-    res.status(500).json({ message: "Erreur interne du serveur" });
+      if (product_image) product.images.push(product_image);
+
+      const colorsForProduct = colorResults
+        .filter(color => color.product_id === id)
+        .map(({ color_name, hex_code, color_image }) => ({
+          color_name,
+          hex_code,
+          image_url: color_image,
+        }));
+
+      product.colors = colorsForProduct;
+
+      return acc;
+    }, []);
+
+    res.status(200).json(products);
+  } catch (err) {
+    console.error('Erreur lors de la récupération des produits :', err);
+    res.status(500).json({ message: 'Erreur interne lors de la récupération des produits.' });
   }
 };
 
-
-// Updated getAllProducts to include colors
-exports.getAllProducts = (req, res) => {
-  const productsQuery = `
-    SELECT p.id, p.name, p.price, p.category_id, pi.image_url
-    FROM products p
-    LEFT JOIN product_images pi ON p.id = pi.product_id
-  `;
-
-  const colorsQuery = `
-    SELECT c.product_id, c.color_name, c.hex_code, pi.image_url
-    FROM colors c
-    LEFT JOIN product_images pi ON c.image_id = pi.id
-  `;
-
-  db.query(productsQuery, (err, productResults) => {
-    if (err) {
-      console.error('Erreur lors de la récupération des produits :', err);
-      return res.status(500).send('Erreur interne lors de la récupération des produits.');
-    }
-
-    db.query(colorsQuery, (err, colorResults) => {
-      if (err) {
-        console.error('Erreur lors de la récupération des couleurs :', err);
-        return res.status(500).send('Erreur interne lors de la récupération des couleurs.');
-      }
-
-      const products = productResults.reduce((acc, row) => {
-        const { id, name, price, category_id, image_url } = row;
-        let product = acc.find(p => p.id === id);
-
-        if (!product) {
-          product = { id, name, price, category_id, images: [], colors: [] };
-          acc.push(product);
-        }
-
-        if (image_url) product.images.push(image_url);
-        
-        const colorsForProduct = colorResults
-          .filter(color => color.product_id === id)
-          .map(({ color_name, hex_code, image_url }) => ({ color_name, hex_code, image_url }));
-        
-        product.colors = colorsForProduct;
-
-        return acc;
-      }, []);
-      
-      res.status(200).json(products);
-    });
-  });
-};
 
 
 

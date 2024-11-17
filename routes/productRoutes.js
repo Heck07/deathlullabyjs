@@ -13,8 +13,6 @@ router.get('/:id', productController.getProductById);
 // Récupérer tous les produits
 router.get('/', productController.getAllProducts);
 
-router.get('/details', productController.getProductsWithDetails);
-
 router.get('/:id/images', productController.getProductImages);
 
 
