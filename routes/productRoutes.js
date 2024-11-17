@@ -12,7 +12,7 @@ router.get('/:id', productController.getProductById);
 
 // Récupérer tous les produits
 router.get('/', productController.getAllProducts);
-router.get('/details', productController.getAllProductsDetails)
+router.get('/details', productController.getAllProductsDetails);
 router.get('/:id/images', productController.getProductImages);
 
 
