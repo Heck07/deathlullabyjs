@@ -50,59 +50,62 @@ exports.getProductImages = (req, res) => {
 
 
 // Updated getAllProducts to include colors
-exports.getAllProducts = async (req, res) => {
-  try {
-    // Query pour récupérer les produits
-    const productsQuery = `
-      SELECT p.id, p.name, p.price, p.category_id, pi.image_url AS product_image
-      FROM products p
-      LEFT JOIN product_images pi ON p.id = pi.product_id
-    `;
+exports.getAllProducts = (req, res) => {
+  const query = `
+    SELECT 
+      p.id AS product_id, 
+      p.name AS product_name, 
+      p.price, 
+      c.id AS color_id, 
+      c.color_name, 
+      c.hex_code, 
+      pi.image_url
+    FROM 
+      products p
+    LEFT JOIN 
+      colors c ON p.id = c.product_id
+    LEFT JOIN 
+      product_images pi ON c.id = pi.color_id;
+  `;
 
-    // Query pour récupérer les couleurs avec leurs images
-    const colorsQuery = `
-      SELECT c.product_id, c.color_name, c.hex_code, pi.image_url AS color_image
-      FROM colors c
-      LEFT JOIN product_images pi ON c.image_id = pi.id
-    `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Erreur lors de la récupération des produits :', err);
+      return res.status(500).send('Erreur interne.');
+    }
 
-    const [productResults] = await db.promise().query(productsQuery);
-    const [colorResults] = await db.promise().query(colorsQuery);
+    const products = results.reduce((acc, row) => {
+      const {
+        product_id, product_name, price, color_id, color_name, hex_code, image_url
+      } = row;
 
-    // Regroupement des données
-    const products = productResults.reduce((acc, row) => {
-      const { id, name, price, category_id, product_image } = row;
-      let product = acc.find(p => p.id === id);
+      let product = acc.find(p => p.id === product_id);
 
       if (!product) {
-        product = { id, name, price, category_id, images: [], colors: [] };
+        product = { 
+          id: product_id, 
+          name: product_name, 
+          price, 
+          colors: [] 
+        };
         acc.push(product);
       }
 
-      if (product_image) product.images.push(product_image);
+      let color = product.colors.find(c => c.id === color_id);
 
-      const colorsForProduct = colorResults
-        .filter(color => color.product_id === id)
-        .map(({ color_name, hex_code, color_image }) => ({
-          color_name,
-          hex_code,
-          image_url: color_image,
-        }));
+      if (!color) {
+        color = { id: color_id, name: color_name, hex: hex_code, images: [] };
+        product.colors.push(color);
+      }
 
-      product.colors = colorsForProduct;
+      if (image_url) color.images.push(image_url);
 
       return acc;
     }, []);
 
     res.status(200).json(products);
-  } catch (err) {
-    console.error('Erreur lors de la récupération des produits :', err);
-    res.status(500).json({ message: 'Erreur interne lors de la récupération des produits.' });
-  }
+  });
 };
-
-
-
 
 
 // AJOUTER UN Produit
