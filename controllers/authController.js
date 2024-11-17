@@ -15,7 +15,7 @@ exports.register = async (req, res) => {
     // Vérifier si l'email existe déjà
     const [checkUser] = await db.promise().query('SELECT * FROM users WHERE email = ?', [email]);
     if (checkUser.length > 0) {
-      return res.status(400).send('Cet email est déjà utilisé.');
+      return res.status(400).send('Cet email est déjautilisé.');
     }
 
     // Hasher le mot de passe
@@ -28,7 +28,7 @@ exports.register = async (req, res) => {
     res.status(201).send('Utilisateur créé avec succès.');
   } catch (err) {
     console.error('Erreur lors de la création de l\'utilisateur :', err);
-    res.status(500).send('Erreur interne lors de la création de l\'utilisateur.');
+    res.status(500).send('Erreur i lors de la création de l\'utilisateur.');
   }
 };
 
