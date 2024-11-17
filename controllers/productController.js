@@ -48,7 +48,7 @@ exports.getProductImages = (req, res) => {
   });
 };
 
-exports.getAllProducts = (req, res) => {
+exports.getAllProductsDetails = (req, res) => {
   const query = `
     SELECT 
       p.id AS product_id, 
@@ -106,7 +106,7 @@ exports.getAllProducts = (req, res) => {
 };
 
 // Updated getAllProducts to include colors
-exports.getAllProductsDetails = (req, res) => {
+exports.getAllProducts = (req, res) => {
   const productsQuery = `
     SELECT p.id, p.name, p.price, p.category_id, pi.image_url
     FROM products p
