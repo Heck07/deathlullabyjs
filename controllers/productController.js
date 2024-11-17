@@ -48,6 +48,45 @@ exports.getProductImages = (req, res) => {
   });
 };
 
+exports.getProductsWithDetails = async (req, res) => {
+  try {
+    // Récupérer les produits
+    const [products] = await db.promise().query(`SELECT * FROM products`);
+
+    // Récupérer les couleurs associées
+    const [colors] = await db.promise().query(`SELECT * FROM colors`);
+
+    // Récupérer les images associées
+    const [images] = await db.promise().query(`SELECT * FROM product_images`);
+
+    // Structure des données
+    const result = products.map((product) => {
+      const productColors = colors.filter((color) => color.product_id === product.id);
+      const productImages = productColors.map((color) => ({
+        color_id: color.id,
+        hex_code: color.hex_code,
+        images: images
+          .filter((img) => img.color_id === color.id)
+          .map((img) => img.image_url),
+      }));
+
+      return {
+        ...product,
+        colors: productColors.map((color) => ({
+          id: color.id,
+          hex_code: color.hex_code,
+        })),
+        colorImages: productImages,
+      };
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Erreur lors de la récupération des produits :", error);
+    res.status(500).json({ message: "Erreur interne du serveur" });
+  }
+};
+
 
 // Updated getAllProducts to include colors
 exports.getAllProducts = (req, res) => {
