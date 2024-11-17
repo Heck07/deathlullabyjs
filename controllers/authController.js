@@ -28,7 +28,7 @@ exports.register = async (req, res) => {
     res.status(201).send('Utilisateur créé avec succès.');
   } catch (err) {
     console.error('Erreur lors de la création de l\'utilisateur :', err);
-    res.status(500).send('Erreur i lors de la création de l\'utilisateur.');
+    res.status(500).send('Erreur interne lors de la création de l\'utilisateur.');
   }
 };
 
