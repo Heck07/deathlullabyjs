@@ -48,8 +48,6 @@ exports.getProductImages = (req, res) => {
   });
 };
 
-
-// Updated getAllProducts to include colors
 exports.getAllProducts = (req, res) => {
   const query = `
     SELECT 
@@ -106,6 +104,59 @@ exports.getAllProducts = (req, res) => {
     res.status(200).json(products);
   });
 };
+
+// Updated getAllProducts to include colors
+exports.getAllProductsDetails = (req, res) => {
+  const productsQuery = `
+    SELECT p.id, p.name, p.price, p.category_id, pi.image_url
+    FROM products p
+    LEFT JOIN product_images pi ON p.id = pi.product_id
+  `;
+
+  const colorsQuery = `
+    SELECT c.product_id, c.color_name, c.hex_code, pi.image_url
+    FROM colors c
+    LEFT JOIN product_images pi ON c.image_id = pi.id
+  `;
+
+  db.query(productsQuery, (err, productResults) => {
+    if (err) {
+      console.error('Erreur lors de la récupération des produits :', err);
+      return res.status(500).send('Erreur interne lors de la récupération des produits.');
+    }
+
+    db.query(colorsQuery, (err, colorResults) => {
+      if (err) {
+        console.error('Erreur lors de la récupération des couleurs :', err);
+        return res.status(500).send('Erreur interne lors de la récupération des couleurs.');
+      }
+
+      const products = productResults.reduce((acc, row) => {
+        const { id, name, price, category_id, image_url } = row;
+        let product = acc.find(p => p.id === id);
+
+        if (!product) {
+          product = { id, name, price, category_id, images: [], colors: [] };
+          acc.push(product);
+        }
+
+        if (image_url) product.images.push(image_url);
+        
+        const colorsForProduct = colorResults
+          .filter(color => color.product_id === id)
+          .map(({ color_name, hex_code, image_url }) => ({ color_name, hex_code, image_url }));
+        
+        product.colors = colorsForProduct;
+
+        return acc;
+      }, []);
+      
+      res.status(200).json(products);
+    });
+  });
+};
+
+
 
 
 // AJOUTER UN Produit
