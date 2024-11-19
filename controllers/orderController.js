@@ -116,36 +116,11 @@ exports.createOrder = async (req, res) => {
     `, [itemInserts]);
 
     // Sauvegarder les adresses dans `user_addresses` si l'utilisateur est connecté
-    if (userId & saveAddress) {
-      const addressInserts = [
-        [
-          userId,
-          'shipping',
-          shippingAddress.firstName,
-          shippingAddress.lastName,
-          shippingAddress.phone,
-          shippingAddress.street,
-          shippingAddress.postalCode,
-          shippingAddress.city,
-          shippingAddress.country,
-        ],
-        [
-          userId,
-          'billing',
-          billing.firstName,
-          billing.lastName,
-          billing.phone || '', // Ajoutez un champ téléphone à l'adresse de facturation si nécessaire
-          billing.street,
-          billing.postalCode,
-          billing.city,
-          billing.country,
-        ],
-      ];
-
+    if (userId && saveAddress) {
       await db.promise().query(`
         INSERT INTO user_addresses 
         (user_id, address_type, first_name, last_name, phone, street_address, postal_code, city, country) 
-        VALUES ? 
+        VALUES (?, 'shipping', ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE 
           first_name = VALUES(first_name), 
           last_name = VALUES(last_name), 
@@ -154,7 +129,16 @@ exports.createOrder = async (req, res) => {
           postal_code = VALUES(postal_code), 
           city = VALUES(city), 
           country = VALUES(country)
-      `, [addressInserts]);
+      `, [
+        userId,
+        shippingAddress.firstName,
+        shippingAddress.lastName,
+        shippingAddress.phone,
+        shippingAddress.street,
+        shippingAddress.postalCode,
+        shippingAddress.city,
+        shippingAddress.country,
+      ]);
     }
 
     // Envoie un email de confirmation
