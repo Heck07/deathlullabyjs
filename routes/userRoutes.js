@@ -13,9 +13,9 @@ router.delete('/:id', authMiddleware, roleMiddleware(['admin']), userController.
 router.get('/temp-users', userController.getTempUserEmail);
 
 // Obtenir toutes les adresses d'un utilisateur
-router.get('/address', authenticateToken, addressController.getUserAddresses);
+router.get('/address', authenticateToken, userController.getUserAddresses);
 // Ajouter ou mettre à jour une adresse
-router.post('/address', authenticateToken, addressController.saveUserAddress);
+router.post('/address', authenticateToken, userController.saveUserAddress);
 
 router.get('/me', authenticateToken, userController.getUserDetails);
 
