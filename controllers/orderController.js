@@ -44,10 +44,9 @@ async function sendConfirmationEmail(email, orderId, signupToken, items, orderTo
 
 
 exports.createOrder = async (req, res) => {
-  const { userId, email, shippingAddress, billingAddress, items, paymentIntentId, orderTotal, useShippingAsBilling } = req.body;
+  const { userId, email, saveAddress, shippingAddress, billingAddress, items, paymentIntentId, orderTotal, useShippingAsBilling } = req.body;
 
   try {
-
     // Vérifiez que `paymentIntentId` est fourni
     if (!paymentIntentId) {
       return res.status(400).json({ message: 'paymentIntentId manquant' });
@@ -56,7 +55,6 @@ exports.createOrder = async (req, res) => {
     // Vérifier le paiement avec Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
     if (!paymentIntent || paymentIntent.status !== 'succeeded') {
-      // Affichez des informations détaillées si le paiement échoue
       console.error(`Échec du paiement : Statut - ${paymentIntent ? paymentIntent.status : 'Non trouvé'}`);
       if (paymentIntent && paymentIntent.last_payment_error) {
         console.error('Détails de l\'erreur :', paymentIntent.last_payment_error);
@@ -67,12 +65,12 @@ exports.createOrder = async (req, res) => {
     let signupToken = null;
     if (!userId) {
       signupToken = await generateSignupToken();
-      await db.promise().query('INSERT INTO temp_users (email, signupToken) VALUES (?, ?)', [email, signupToken]);
+      await db.promise().query('INSERT INTO temp_users (email, signup_token) VALUES (?, ?) ON DUPLICATE KEY UPDATE signup_token = ?', [email, signupToken, signupToken]);
     }
 
     const billing = useShippingAsBilling ? shippingAddress : billingAddress;
 
-    // Insérer la commande dans la table orders
+    // Insérer la commande dans la table `orders`
     const [orderResult] = await db.promise().query(`
       INSERT INTO orders (
         user_id, email, shipping_first_name, shipping_last_name, shipping_phone, 
@@ -81,7 +79,7 @@ exports.createOrder = async (req, res) => {
         billing_postal_code, billing_city, billing_country, payment_intent_id, order_total
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      userId,
+      userId || null,
       email,
       shippingAddress.firstName,
       shippingAddress.lastName,
@@ -102,7 +100,7 @@ exports.createOrder = async (req, res) => {
 
     const orderId = orderResult.insertId;
 
-    // Insérer les items de la commande dans order_items
+    // Insérer les items de la commande dans `order_items`
     const itemInserts = items.map(item => [
       orderId,
       item.productId,
@@ -117,8 +115,49 @@ exports.createOrder = async (req, res) => {
       VALUES ?
     `, [itemInserts]);
 
-    // Envoie l'email de confirmation
-    console.log('Contenu des items :', items);
+    // Sauvegarder les adresses dans `user_addresses` si l'utilisateur est connecté
+    if (userId & saveAddress) {
+      const addressInserts = [
+        [
+          userId,
+          'shipping',
+          shippingAddress.firstName,
+          shippingAddress.lastName,
+          shippingAddress.phone,
+          shippingAddress.street,
+          shippingAddress.postalCode,
+          shippingAddress.city,
+          shippingAddress.country,
+        ],
+        [
+          userId,
+          'billing',
+          billing.firstName,
+          billing.lastName,
+          billing.phone || '', // Ajoutez un champ téléphone à l'adresse de facturation si nécessaire
+          billing.street,
+          billing.postalCode,
+          billing.city,
+          billing.country,
+        ],
+      ];
+
+      await db.promise().query(`
+        INSERT INTO user_addresses 
+        (user_id, address_type, first_name, last_name, phone, street_address, postal_code, city, country) 
+        VALUES ? 
+        ON DUPLICATE KEY UPDATE 
+          first_name = VALUES(first_name), 
+          last_name = VALUES(last_name), 
+          phone = VALUES(phone), 
+          street_address = VALUES(street_address), 
+          postal_code = VALUES(postal_code), 
+          city = VALUES(city), 
+          country = VALUES(country)
+      `, [addressInserts]);
+    }
+
+    // Envoie un email de confirmation
     await sendConfirmationEmail(email, orderId, signupToken, items, orderTotal);
 
     res.status(201).json({ message: 'Commande créée avec succès', orderId });
@@ -127,6 +166,7 @@ exports.createOrder = async (req, res) => {
     res.status(500).json({ message: 'Erreur lors de la commande', error });
   }
 };
+
 
 exports.createPaymentIntent = async (req, res) => {
   try {

@@ -120,3 +120,65 @@ exports.getTempUserEmail = async (req, res) => {
     res.status(500).json({ message: 'Erreur interne lors de la récupération de l\'email.' });
   }
 };
+
+
+// Obtenir les adresses d'un utilisateur
+exports.getUserAddresses = async (req, res) => {
+  const userId = req.user.id; // Supposant que l'authMiddleware ajoute `req.user`
+
+  try {
+    const [addresses] = await db.promise().query(
+      `SELECT id, address_type, first_name, last_name, street, postal_code, city, country 
+       FROM user_addresses 
+       WHERE user_id = ?`,
+      [userId]
+    );
+
+    res.status(200).json(addresses);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des adresses utilisateur:', error);
+    res.status(500).json({ message: 'Erreur interne.' });
+  }
+};
+
+// Ajouter ou mettre à jour une adresse d'utilisateur
+exports.saveUserAddress = async (req, res) => {
+  const userId = req.user.id; // Supposant que l'authMiddleware ajoute `req.user`
+  const { address_type, first_name, last_name, street, postal_code, city, country } = req.body;
+
+  if (!address_type || !first_name || !last_name || !street || !postal_code || !city || !country) {
+    return res.status(400).json({ message: 'Tous les champs sont requis.' });
+  }
+
+  try {
+    // Vérifiez si une adresse du même type existe déjà
+    const [existingAddress] = await db.promise().query(
+      `SELECT id FROM user_addresses WHERE user_id = ? AND address_type = ?`,
+      [userId, address_type]
+    );
+
+    if (existingAddress.length > 0) {
+      // Mettre à jour l'adresse existante
+      await db.promise().query(
+        `UPDATE user_addresses 
+         SET first_name = ?, last_name = ?, street = ?, postal_code = ?, city = ?, country = ?
+         WHERE user_id = ? AND address_type = ?`,
+        [first_name, last_name, street, postal_code, city, country, userId, address_type]
+      );
+
+      return res.status(200).json({ message: 'Adresse mise à jour avec succès.' });
+    }
+
+    // Ajouter une nouvelle adresse
+    await db.promise().query(
+      `INSERT INTO user_addresses (user_id, address_type, first_name, last_name, street, postal_code, city, country)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, address_type, first_name, last_name, street, postal_code, city, country]
+    );
+
+    res.status(201).json({ message: 'Adresse ajoutée avec succès.' });
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde de l\'adresse utilisateur:', error);
+    res.status(500).json({ message: 'Erreur interne.' });
+  }
+};
