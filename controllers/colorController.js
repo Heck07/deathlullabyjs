@@ -105,7 +105,7 @@ exports.deleteColor = (req, res) => {
           const deleteColorQuery = 'DELETE FROM colors WHERE id = ?';
           db.query(deleteColorQuery, [colorId], (err) => {
             if (err) return res.status(500).send('Error deleting color');
-            res.status(200).send('Color and associated images deleted successfully');
+            res.status(200).send('Colo and associated images deleted successfully');
           });
         });
       })
