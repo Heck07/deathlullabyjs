@@ -150,6 +150,18 @@ exports.saveUserAddress = async (req, res) => {
     return res.status(400).json({ message: 'Tous les champs sont requis.' });
   }
 
+  const payload = {
+    address_type: addressType,
+    street: address.rue,
+    postal_code: address.codePostal,
+    city: address.ville,
+    country: address.pays || "France", // Exemple, si le champ `pays` est manquant
+    first_name: address.nom,
+    last_name: address.prenom,
+  };
+
+  console.log("Payload envoyé :", payload);
+  
   try {
     // Vérifiez si une adresse du même type existe déjà
     const [existingAddress] = await db.promise().query(
