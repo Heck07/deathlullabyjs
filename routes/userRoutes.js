@@ -16,6 +16,9 @@ router.get('/temp-users', userController.getTempUserEmail);
 router.get('/address', authenticateToken, userController.getUserAddresses);
 // Ajouter ou mettre à jour une adresse
 router.post('/address', authenticateToken, userController.saveUserAddress);
+// Supprimer une adresse
+router.delete('/address', authMiddleware, userController.deleteAddress);
+
 
 router.get('/me', authenticateToken, userController.getUserDetails);
 
