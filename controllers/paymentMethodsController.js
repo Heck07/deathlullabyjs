@@ -101,7 +101,7 @@ exports.savePaymentMethod = async (req, res) => {
       INSERT INTO payment_methods (user_id, payment_method_id, card_last4, card_brand, exp_month, exp_year)
       VALUES (?, ?, ?, ?, ?, ?)
     `;
-    const result = await db.query(query, [
+    const result = await db.promise().query(query, [
       customerId,
       paymentMethod.id,
       paymentMethod.card.last4,
