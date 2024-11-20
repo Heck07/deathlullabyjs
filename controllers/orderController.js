@@ -239,13 +239,15 @@ exports.getUserOrders = async (req, res) => {
     const ordersWithDetails = await Promise.all(
       orders.map(async (order) => {
         const [items] = await db.promise().query(
-          `SELECT 
+         `SELECT 
              oi.*, 
              p.name AS product_name, 
-             pi.image_url 
+             (SELECT image_url 
+              FROM product_images 
+              WHERE product_id = oi.product_id 
+              LIMIT 1) AS image_url
            FROM order_items oi
            LEFT JOIN products p ON oi.product_id = p.id
-           LEFT JOIN product_images pi ON oi.product_id = pi.product_id AND oi.color = pi.color_id
            WHERE oi.order_id = ?`,
           [order.id]
         );
