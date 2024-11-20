@@ -3,21 +3,46 @@ const db = require('../config/database');
 
 // Créer un SetupIntent pour permettre à un utilisateur de sauvegarder un moyen de paiement
 exports.createSetupIntent = async (req, res) => {
-  const { customerId } = req.body;
+  const { userId, email } = req.body;
 
-  if (!customerId) {
-    return res.status(400).json({ error: 'Customer ID is required.' });
+  if (!userId || !email) {
+    return res.status(400).json({ error: 'User ID and email are required.' });
   }
 
   try {
+    // Étape 1 : Vérifier si l'utilisateur a déjà un `customerId` Stripe
+    let customerId;
+    const [user] = await db.promise().query('SELECT stripe_customer_id FROM users WHERE id = ?', [userId]);
+
+    if (user.length && user[0].stripe_customer_id) {
+      // Utilisateur a déjà un client Stripe
+      customerId = user[0].stripe_customer_id;
+    } else {
+      // Étape 2 : Créer un nouveau client Stripe
+      const customer = await stripe.customers.create({
+        email: email,
+        metadata: { userId }, // Associe l'utilisateur à Stripe
+      });
+
+      customerId = customer.id;
+
+      // Étape 3 : Sauvegarder le `customerId` dans la base de données
+      await db.promise().query('UPDATE users SET stripe_customer_id = ? WHERE id = ?', [customerId, userId]);
+    }
+
+    // Étape 4 : Créer un `SetupIntent` pour sauvegarder un moyen de paiement
     const setupIntent = await stripe.setupIntents.create({
       customer: customerId,
     });
 
-    return res.status(200).json({ clientSecret: setupIntent.client_secret });
+    // Étape 5 : Retourner le `clientSecret` au frontend
+    return res.status(200).json({
+      clientSecret: setupIntent.client_secret,
+      customerId, // Optionnel : retourner l'ID client
+    });
   } catch (error) {
-    console.error('Error creating SetupIntent:', error);
-    return res.status(500).json({ error: 'Failed to create SetupIntent.' });
+    console.error('Error creating or retrieving SetupIntent:', error);
+    return res.status(500).json({ error: 'Failed to create or retrieve SetupIntent.' });
   }
 };
 
