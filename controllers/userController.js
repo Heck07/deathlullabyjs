@@ -185,33 +185,27 @@ exports.saveUserAddress = async (req, res) => {
 };
 
 exports.deleteAddress = async (req, res) => {
-  const userId = req.user.id; // Récupère l'ID utilisateur depuis le middleware d'authentification
-  const { address_type } = req.body; // Extrait le type d'adresse (billing ou shipping) depuis la requête
+  const userId = req.user.id; // ID utilisateur depuis le middleware d'authentification
+  const { address_type } = req.body; // Récupérer le type d'adresse
 
   if (!address_type) {
-    return res.status(400).json({ message: 'Le type d\'adresse est requis.' });
+    return res.status(400).json({ message: "Le type d'adresse est requis." });
   }
 
   try {
-    // Vérifie si l'adresse existe pour cet utilisateur et ce type
-    const [address] = await db.promise().query(
-      'SELECT id FROM user_addresses WHERE user_id = ? AND address_type = ?',
+    // Supprimer l'adresse en fonction de l'utilisateur et du type
+    const [result] = await db.promise().query(
+      `DELETE FROM user_addresses WHERE user_id = ? AND address_type = ?`,
       [userId, address_type]
     );
 
-    if (address.length === 0) {
-      return res.status(404).json({ message: 'Adresse non trouvée.' });
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Adresse non trouvée." });
     }
 
-    // Supprime l'adresse
-    await db.promise().query(
-      'DELETE FROM user_addresses WHERE user_id = ? AND address_type = ?',
-      [userId, address_type]
-    );
-
-    res.status(200).json({ message: 'Adresse supprimée avec succès.' });
+    res.status(200).json({ message: "Adresse supprimée avec succès." });
   } catch (error) {
-    console.error('Erreur lors de la suppression de l\'adresse :', error);
-    res.status(500).json({ message: 'Erreur interne.' });
+    console.error("Erreur lors de la suppression de l'adresse :", error);
+    res.status(500).json({ message: "Erreur interne lors de la suppression de l'adresse." });
   }
 };
