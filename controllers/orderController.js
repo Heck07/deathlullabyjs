@@ -117,29 +117,29 @@ exports.createOrder = async (req, res) => {
 
     // Sauvegarder les adresses dans `user_addresses` si l'utilisateur est connecté
     if (userId && saveAddress) {
-      await db.promise().query(
-        `INSERT INTO user_addresses (user_id, address_type, first_name, last_name, phone, street_address, postal_code, city, country)
-         VALUES (?, 'shipping', ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-           first_name = VALUES(first_name),
-           last_name = VALUES(last_name),
-           phone = VALUES(phone),
-           street_address = VALUES(street_address),
-           postal_code = VALUES(postal_code),
-           city = VALUES(city),
-           country = VALUES(country)`,
-        [
-          userId,
-          shippingAddress.firstName,
-          shippingAddress.lastName,
-          shippingAddress.phone,
-          shippingAddress.street,
-          shippingAddress.postalCode,
-          shippingAddress.city,
-          shippingAddress.country,
-        ]
-      );
-    }    
+      await db.promise().query(`
+        INSERT INTO user_addresses 
+        (user_id, address_type, first_name, last_name, phone, street_address, postal_code, city, country) 
+        VALUES (?, 'shipping', ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+          first_name = VALUES(first_name), 
+          last_name = VALUES(last_name), 
+          phone = VALUES(phone), 
+          street_address = VALUES(street_address), 
+          postal_code = VALUES(postal_code), 
+          city = VALUES(city), 
+          country = VALUES(country)
+      `, [
+        userId,
+        shippingAddress.firstName,
+        shippingAddress.lastName,
+        shippingAddress.phone,
+        shippingAddress.street,
+        shippingAddress.postalCode,
+        shippingAddress.city,
+        shippingAddress.country,
+      ]);
+    }
     //Sauvegarde le moyen de paiement si validé
     if (setupIntentId) {
       const paymentMethod = await stripe.paymentMethods.retrieve(setupIntentId);
