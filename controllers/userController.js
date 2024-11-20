@@ -193,6 +193,9 @@ exports.deleteAddress = async (req, res) => {
   }
 
   try {
+    if (isNaN(userId)) {
+      return res.status(400).json({ message: "ID utilisateur invalide." });
+    }
     // Supprimer l'adresse en fonction de l'utilisateur et du type
     const [result] = await db.promise().query(
       `DELETE FROM user_addresses WHERE user_id = ? AND address_type = ?`,
