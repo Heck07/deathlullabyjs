@@ -65,29 +65,31 @@ exports.createOrRetrieveSetupIntent = async (req, res) => {
 
 // Sauvegarder une méthode de paiement dans la base de données
 exports.savePaymentMethod = async (req, res) => {
-  const { userId, paymentMethodId, brand, last4, expMonth, expYear, isDefault } = req.body;
+  const { customerId, paymentMethodId } = req.body;
 
-  if (!userId || !paymentMethodId || !brand || !last4 || !expMonth || !expYear) {
-    return res.status(400).json({ error: 'Missing required fields.' });
+  if (!customerId || !paymentMethodId) {
+    return res.status(400).json({ error: 'Customer ID and Payment Method ID are required.' });
   }
 
   try {
-    // Si une méthode de paiement par défaut existe déjà, la désactiver si `isDefault` est vrai
-    if (isDefault) {
-      await db.promise().query(
-        `UPDATE payment_methods SET is_default = 0 WHERE user_id = ?`,
-        [userId]
-      );
-    }
+    // Récupérez les détails de la méthode de paiement depuis Stripe
+    const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
 
-    // Insérer la méthode de paiement dans la base de données
-    const [result] = await db.promise().query(
-      `INSERT INTO payment_methods (user_id, payment_method_id, brand, last4, exp_month, exp_year, is_default, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [userId, paymentMethodId, brand, last4, expMonth, expYear, isDefault ? 1 : 0]
-    );
+    // Sauvegardez la méthode de paiement dans votre base de données
+    const query = `
+      INSERT INTO payment_methods (customer_id, payment_method_id, card_last4, card_brand, exp_month, exp_year)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    await db.query(query, [
+      customerId,
+      paymentMethod.id,
+      paymentMethod.card.last4,
+      paymentMethod.card.brand,
+      paymentMethod.card.exp_month,
+      paymentMethod.card.exp_year,
+    ]);
 
-    return res.status(201).json({ message: 'Payment method saved successfully.', id: result.insertId });
+    return res.status(201).json({ success: true });
   } catch (error) {
     console.error('Error saving payment method:', error);
     return res.status(500).json({ error: 'Failed to save payment method.' });
