@@ -1,5 +1,5 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const db = require('../config/db'); // Assurez-vous que votre connexion MySQL est bien configurée
+const db = require('../config/database');
 
 // Créer un SetupIntent pour permettre à un utilisateur de sauvegarder un moyen de paiement
 exports.createSetupIntent = async (req, res) => {
