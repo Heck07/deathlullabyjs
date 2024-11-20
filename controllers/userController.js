@@ -185,17 +185,16 @@ exports.saveUserAddress = async (req, res) => {
 };
 
 exports.deleteAddress = async (req, res) => {
-  const userId = req.user.id; // ID utilisateur depuis le middleware d'authentification
-  const { address_type } = req.body; // Récupérer le type d'adresse
+  const userId = req.user.id; // Récupérer l'ID utilisateur
+  const { address_type } = req.query; // Utiliser req.query pour les paramètres envoyés en URL
 
+  // Valider les entrées
   if (!address_type || !['billing', 'shipping'].includes(address_type)) {
     return res.status(400).json({ message: "Type d'adresse invalide." });
   }
+
   try {
-    if (isNaN(userId)) {
-      return res.status(400).json({ message: "ID utilisateur invalide." });
-    }
-    // Supprimer l'adresse en fonction de l'utilisateur et du type
+    // Supprimer l'adresse correspondant à l'utilisateur et au type
     const [result] = await db.promise().query(
       `DELETE FROM user_addresses WHERE user_id = ? AND address_type = ?`,
       [userId, address_type]
@@ -211,3 +210,4 @@ exports.deleteAddress = async (req, res) => {
     res.status(500).json({ message: "Erreur interne lors de la suppression de l'adresse." });
   }
 };
+
