@@ -4,7 +4,7 @@ const paymentMethodsController = require('../controllers/paymentMethodsControlle
 
 // Créer un SetupIntent
 router.post('/setup-intent', paymentMethodsController.createSetupIntent);
-router.post('/setup-intent-create-or-retrieve', paymentMethodsController.createOrRetrieveSetupIntent);
+router.post('/setup-intent-create', paymentMethodsController.createOrRetrieveSetupIntent);
 
 // Sauvegarder une méthode de paiement
 router.post('/save', paymentMethodsController.savePaymentMethod);
