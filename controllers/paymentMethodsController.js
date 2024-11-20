@@ -98,7 +98,7 @@ exports.savePaymentMethod = async (req, res) => {
 
     // Sauvegardez la méthode de paiement dans votre base de données
     const query = `
-      INSERT INTO payment_methods (user_id, payment_method_id, card_last4, card_brand, exp_month, exp_year)
+      INSERT INTO payment_methods (user_id, payment_method_id, last4, brand, exp_month, exp_year)
       VALUES (?, ?, ?, ?, ?, ?)
     `;
     const result = await db.promise().query(query, [
