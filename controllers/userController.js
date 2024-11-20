@@ -128,7 +128,7 @@ exports.getUserAddresses = async (req, res) => {
 
   try {
     const [addresses] = await db.promise().query(
-      `SELECT id, address_type, first_name, last_name, street, postal_code, city, country 
+      `SELECT id, address_type, first_name, last_name, street_address, postal_code, city, country 
        FROM user_addresses 
        WHERE user_id = ?`,
       [userId]
@@ -183,7 +183,7 @@ exports.saveUserAddress = async (req, res) => {
 
     // Ajouter une nouvelle adresse
     await db.promise().query(
-      `INSERT INTO user_addresses (user_id, address_type, first_name, last_name, street, postal_code, city, country)
+      `INSERT INTO user_addresses (user_id, address_type, first_name, last_name, street_address, postal_code, city, country)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [userId, address_type, first_name, last_name, street_address, postal_code, city, country]
     );
