@@ -146,21 +146,10 @@ exports.saveUserAddress = async (req, res) => {
   const userId = req.user.id; // Supposant que l'authMiddleware ajoute `req.user`
   const { address_type, first_name, last_name, street_address, postal_code, city, country } = req.body;
 
+  // Vérifiez que tous les champs requis sont présents
   if (!address_type || !first_name || !last_name || !street_address || !postal_code || !city || !country) {
     return res.status(400).json({ message: 'Tous les champs sont requis' });
   }
-
-  const payload = {
-    address_type: addressType,
-    street: address.street_address,
-    postal_code: address.codePostal,
-    city: address.ville,
-    country: address.pays || "France", // Exemple, si le champ `pays` est manquant
-    first_name: address.nom,
-    last_name: address.prenom,
-  };
-
-  console.log("Payload envoyé :", payload);
 
   try {
     // Vérifiez si une adresse du même type existe déjà
@@ -173,7 +162,7 @@ exports.saveUserAddress = async (req, res) => {
       // Mettre à jour l'adresse existante
       await db.promise().query(
         `UPDATE user_addresses 
-         SET first_name = ?, last_name = ?, street = ?, postal_code = ?, city = ?, country = ?
+         SET first_name = ?, last_name = ?, street_address = ?, postal_code = ?, city = ?, country = ?
          WHERE user_id = ? AND address_type = ?`,
         [first_name, last_name, street_address, postal_code, city, country, userId, address_type]
       );
@@ -190,7 +179,7 @@ exports.saveUserAddress = async (req, res) => {
 
     res.status(201).json({ message: 'Adresse ajoutée avec succès.' });
   } catch (error) {
-    console.error('Erreur lors de la sauvegarde de l\'adresse utilisateur:', error);
-    res.status(500).json({ message: 'Erreur interne.' });
+    console.error("Erreur lors de la sauvegarde de l'adresse utilisateur:", error);
+    res.status(500).json({ message: "Erreur interne." });
   }
 };
