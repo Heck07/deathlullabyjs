@@ -26,29 +26,40 @@ exports.createOrRetrieveSetupIntent = async (req, res) => {
   const { userId, email } = req.body;
 
   if (!userId || !email) {
+    console.error("Validation échouée : User ID ou email manquant.");
     return res.status(400).json({ error: 'User ID and email are required.' });
   }
 
   try {
     let customerId;
+
+    console.log(`Recherche du client dans la base de données pour l'utilisateur ${userId}...`);
     const [user] = await db.promise().query('SELECT stripe_customer_id FROM users WHERE id = ?', [userId]);
 
     if (user.length && user[0].stripe_customer_id) {
       customerId = user[0].stripe_customer_id;
+      console.log(`Client Stripe trouvé : ${customerId}`);
     } else {
+      console.log(`Aucun client Stripe trouvé pour l'utilisateur ${userId}, création d'un nouveau client...`);
       const customer = await stripe.customers.create({ email, metadata: { userId } });
       customerId = customer.id;
+      console.log(`Nouveau client Stripe créé : ${customerId}`);
+      
+      console.log(`Mise à jour de la base de données avec le Stripe Customer ID pour l'utilisateur ${userId}...`);
       await db.promise().query('UPDATE users SET stripe_customer_id = ? WHERE id = ?', [customerId, userId]);
     }
 
+    console.log(`Création d'un SetupIntent pour le client ${customerId}...`);
     const setupIntent = await stripe.setupIntents.create({ customer: customerId });
 
+    console.log(`SetupIntent créé avec succès : ClientSecret = ${setupIntent.client_secret}`);
     return res.status(200).json({ clientSecret: setupIntent.client_secret, customerId });
   } catch (error) {
-    console.error("Erreur createOrRetrieveSetupIntent :", error);
+    console.error("Erreur dans createOrRetrieveSetupIntent :", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 
 
 
