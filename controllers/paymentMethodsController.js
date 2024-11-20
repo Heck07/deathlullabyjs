@@ -10,41 +10,47 @@ exports.createSetupIntent = async (req, res) => {
   }
 
   try {
-    // Étape 1 : Vérifier si l'utilisateur a déjà un `customerId` Stripe
-    let customerId;
-    const [user] = await db.promise().query('SELECT stripe_customer_id FROM users WHERE id = ?', [userId]);
+    // Étape 1 : Vérifiez si l'utilisateur a déjà un `stripe_customer_id`
+    let customerId = null;
+    const [users] = await db.promise().query('SELECT stripe_customer_id FROM users WHERE id = ?', [userId]);
 
-    if (user.length && user[0].stripe_customer_id) {
-      // Utilisateur a déjà un client Stripe
-      customerId = user[0].stripe_customer_id;
+    if (users.length && users[0].stripe_customer_id) {
+      customerId = users[0].stripe_customer_id;
     } else {
-      // Étape 2 : Créer un nouveau client Stripe
+      // Étape 2 : Créez un client Stripe si aucun `customerId` n'existe
       const customer = await stripe.customers.create({
         email: email,
-        metadata: { userId }, // Associe l'utilisateur à Stripe
+        metadata: { userId }, // Permet de relier le client Stripe à votre utilisateur
       });
 
       customerId = customer.id;
 
-      // Étape 3 : Sauvegarder le `customerId` dans la base de données
+      // Étape 3 : Mettez à jour la base de données avec le `customerId`
       await db.promise().query('UPDATE users SET stripe_customer_id = ? WHERE id = ?', [customerId, userId]);
     }
 
-    // Étape 4 : Créer un `SetupIntent` pour sauvegarder un moyen de paiement
+    // Étape 4 : Créez un `SetupIntent` pour sauvegarder une méthode de paiement
     const setupIntent = await stripe.setupIntents.create({
       customer: customerId,
     });
 
-    // Étape 5 : Retourner le `clientSecret` au frontend
+    // Étape 5 : Retournez le `client_secret` au frontend
     return res.status(200).json({
       clientSecret: setupIntent.client_secret,
-      customerId, // Optionnel : retourner l'ID client
+      customerId, // Optionnel pour des usages futurs
     });
   } catch (error) {
     console.error('Error creating or retrieving SetupIntent:', error);
+
+    // Gérer les erreurs de Stripe explicitement
+    if (error.type === 'StripeInvalidRequestError') {
+      return res.status(400).json({ error: 'Invalid request to Stripe. Check the parameters.' });
+    }
+
     return res.status(500).json({ error: 'Failed to create or retrieve SetupIntent.' });
   }
 };
+
 
 // Sauvegarder une méthode de paiement dans la base de données
 exports.savePaymentMethod = async (req, res) => {
