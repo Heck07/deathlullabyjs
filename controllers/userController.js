@@ -186,12 +186,15 @@ exports.saveUserAddress = async (req, res) => {
 
 exports.deleteAddress = async (req, res) => {
   const userId = req.user.id; // Récupérer l'ID utilisateur
-  const { address_type } = req.query; // Utiliser req.query pour les paramètres envoyés en URL
+  const { address_type } = req.query; // Utiliser req.query pour les paramètres URL
 
-  // Valider les entrées
+  // Vérification des entrées
   if (!address_type || !['billing', 'shipping'].includes(address_type)) {
     return res.status(400).json({ message: "Type d'adresse invalide." });
   }
+
+  // Journalisation pour déboguer
+  console.log("Supprimer l'adresse pour l'utilisateur :", userId, "de type :", address_type);
 
   try {
     // Supprimer l'adresse correspondant à l'utilisateur et au type
@@ -210,4 +213,3 @@ exports.deleteAddress = async (req, res) => {
     res.status(500).json({ message: "Erreur interne lors de la suppression de l'adresse." });
   }
 };
-
