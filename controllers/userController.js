@@ -188,10 +188,9 @@ exports.deleteAddress = async (req, res) => {
   const userId = req.user.id; // ID utilisateur depuis le middleware d'authentification
   const { address_type } = req.body; // Récupérer le type d'adresse
 
-  if (!address_type) {
-    return res.status(400).json({ message: "Le type d'adresse est requis." });
+  if (!address_type || !['billing', 'shipping'].includes(address_type)) {
+    return res.status(400).json({ message: "Type d'adresse invalide." });
   }
-
   try {
     if (isNaN(userId)) {
       return res.status(400).json({ message: "ID utilisateur invalide." });
