@@ -1,8 +1,28 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const db = require('../config/database');
 
-// Créer un SetupIntent pour permettre à un utilisateur de sauvegarder un moyen de paiement
 exports.createSetupIntent = async (req, res) => {
+  const { customerId } = req.body;
+
+  if (!customerId) {
+    return res.status(400).json({ error: 'Customer ID is required.' });
+  }
+
+  try {
+    const setupIntent = await stripe.setupIntents.create({
+      customer: customerId,
+    });
+
+    return res.status(200).json({ clientSecret: setupIntent.client_secret });
+  } catch (error) {
+    console.error('Error creating SetupIntent:', error);
+    return res.status(500).json({ error: 'Failed to create SetupIntent.' });
+  }
+};
+
+
+// Créer un SetupIntent pour permettre à un utilisateur de sauvegarder un moyen de paiement
+exports.createOrRetrieveSetupIntent = async (req, res) => {
   const { userId, email } = req.body;
 
   if (!userId || !email) {
@@ -10,46 +30,42 @@ exports.createSetupIntent = async (req, res) => {
   }
 
   try {
-    // Étape 1 : Vérifiez si l'utilisateur a déjà un `stripe_customer_id`
-    let customerId = null;
-    const [users] = await db.promise().query('SELECT stripe_customer_id FROM users WHERE id = ?', [userId]);
+    // Étape 1 : Vérifier si l'utilisateur a déjà un `customerId` Stripe
+    let customerId;
+    const [user] = await db.promise().query('SELECT stripe_customer_id FROM users WHERE id = ?', [userId]);
 
-    if (users.length && users[0].stripe_customer_id) {
-      customerId = users[0].stripe_customer_id;
+    if (user.length && user[0].stripe_customer_id) {
+      // Utilisateur a déjà un client Stripe
+      customerId = user[0].stripe_customer_id;
     } else {
-      // Étape 2 : Créez un client Stripe si aucun `customerId` n'existe
+      // Étape 2 : Créer un nouveau client Stripe
       const customer = await stripe.customers.create({
         email: email,
-        metadata: { userId }, // Permet de relier le client Stripe à votre utilisateur
+        metadata: { userId }, // Associe l'utilisateur à Stripe
       });
 
       customerId = customer.id;
 
-      // Étape 3 : Mettez à jour la base de données avec le `customerId`
+      // Étape 3 : Sauvegarder le `customerId` dans la base de données
       await db.promise().query('UPDATE users SET stripe_customer_id = ? WHERE id = ?', [customerId, userId]);
     }
 
-    // Étape 4 : Créez un `SetupIntent` pour sauvegarder une méthode de paiement
+    // Étape 4 : Créer un `SetupIntent` pour sauvegarder un moyen de paiement
     const setupIntent = await stripe.setupIntents.create({
       customer: customerId,
     });
 
-    // Étape 5 : Retournez le `client_secret` au frontend
+    // Étape 5 : Retourner le `clientSecret` au frontend
     return res.status(200).json({
       clientSecret: setupIntent.client_secret,
-      customerId, // Optionnel pour des usages futurs
+      customerId, // Optionnel : retourner l'ID client
     });
   } catch (error) {
     console.error('Error creating or retrieving SetupIntent:', error);
-
-    // Gérer les erreurs de Stripe explicitement
-    if (error.type === 'StripeInvalidRequestError') {
-      return res.status(400).json({ error: 'Invalid request to Stripe. Check the parameters.' });
-    }
-
     return res.status(500).json({ error: 'Failed to create or retrieve SetupIntent.' });
   }
 };
+
 
 
 // Sauvegarder une méthode de paiement dans la base de données
