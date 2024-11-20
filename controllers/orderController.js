@@ -220,3 +220,37 @@ exports.getOrderItems = async (req, res) => {
     res.status(500).json({ message: 'Erreur interne lors de la récupération des items de la commande.' });
   }
 };
+
+exports.getUserOrders = async (req, res) => {
+  const userId = req.user.id; // Récupérer l'utilisateur connecté depuis le token
+
+  try {
+    const [orders] = await db.promise().query(
+      `SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json([]);
+    }
+
+    const ordersWithDetails = await Promise.all(
+      orders.map(async (order) => {
+        const [items] = await db.promise().query(
+          `SELECT oi.*, p.name AS product_name
+           FROM order_items oi
+           LEFT JOIN products p ON oi.product_id = p.id
+           WHERE oi.order_id = ?`,
+          [order.id]
+        );
+
+        return { ...order, items };
+      })
+    );
+
+    res.status(200).json(ordersWithDetails);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des commandes :', error);
+    res.status(500).json({ message: 'Erreur interne lors de la récupération des commandes.' });
+  }
+};
