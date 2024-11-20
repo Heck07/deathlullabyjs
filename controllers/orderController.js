@@ -117,28 +117,47 @@ exports.createOrder = async (req, res) => {
 
     // Sauvegarder les adresses dans `user_addresses` si l'utilisateur est connecté
     if (userId && saveAddress) {
-      await db.promise().query(`
-        INSERT INTO user_addresses 
-        (user_id, address_type, first_name, last_name, phone, street_address, postal_code, city, country) 
-        VALUES (?, 'shipping', ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE 
-          first_name = VALUES(first_name), 
-          last_name = VALUES(last_name), 
-          phone = VALUES(phone), 
-          street_address = VALUES(street_address), 
-          postal_code = VALUES(postal_code), 
-          city = VALUES(city), 
-          country = VALUES(country)
-      `, [
-        userId,
-        shippingAddress.firstName,
-        shippingAddress.lastName,
-        shippingAddress.phone,
-        shippingAddress.street,
-        shippingAddress.postalCode,
-        shippingAddress.city,
-        shippingAddress.country,
-      ]);
+      await db.promise().query(
+        `INSERT INTO user_addresses (user_id, address_type, first_name, last_name, phone, street_address, postal_code, city, country)
+         VALUES (?, 'shipping', ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           first_name = VALUES(first_name),
+           last_name = VALUES(last_name),
+           phone = VALUES(phone),
+           street_address = VALUES(street_address),
+           postal_code = VALUES(postal_code),
+           city = VALUES(city),
+           country = VALUES(country)`,
+        [
+          userId,
+          shippingAddress.firstName,
+          shippingAddress.lastName,
+          shippingAddress.phone,
+          shippingAddress.street,
+          shippingAddress.postalCode,
+          shippingAddress.city,
+          shippingAddress.country,
+        ]
+      );
+    }    
+    //Sauvegarde le moyen de paiement si validé
+    if (setupIntentId) {
+      const paymentMethod = await stripe.paymentMethods.retrieve(setupIntentId);
+      if (paymentMethod) {
+        await db.promise().query(
+          `INSERT INTO payment_methods (user_id, payment_method_id, brand, last4, exp_month, exp_year, is_default, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+          [
+            userId,
+            paymentMethod.id,
+            paymentMethod.card.brand,
+            paymentMethod.card.last4,
+            paymentMethod.card.exp_month,
+            paymentMethod.card.exp_year,
+            1, // Défini comme méthode par défaut
+          ]
+        );
+      }
     }
 
     // Envoie un email de confirmation
@@ -216,7 +235,7 @@ exports.getOrderItems = async (req, res) => {
 
     res.status(200).json({ items });
   } catch (error) {
-    console.error('Erreur lors  la récupération des items de la commande:', error);
+    console.error('Erreur lors de la récupération des items de la commande:', error);
     res.status(500).json({ message: 'Erreur interne lors de la récupération des items de la commande.' });
   }
 };
