@@ -186,7 +186,7 @@ exports.saveUserAddress = async (req, res) => {
 
 exports.deleteAddress = async (req, res) => {
   const userId = req.user.id; // Récupérer l'ID utilisateur
-  const { address_type } = req.body; // Utiliser req.query pour les paramètres URL
+  const { address_type } = req.query; // Utiliser req.query pour les paramètres URL
 
   // Vérification des entrées
   if (!address_type || !['billing', 'shipping'].includes(address_type)) {
