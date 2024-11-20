@@ -144,15 +144,15 @@ exports.getUserAddresses = async (req, res) => {
 // Ajouter ou mettre à jour une adresse d'utilisateur
 exports.saveUserAddress = async (req, res) => {
   const userId = req.user.id; // Supposant que l'authMiddleware ajoute `req.user`
-  const { address_type, first_name, last_name, street, postal_code, city, country } = req.body;
+  const { address_type, first_name, last_name, street_address, postal_code, city, country } = req.body;
 
-  if (!address_type || !first_name || !last_name || !street || !postal_code || !city || !country) {
+  if (!address_type || !first_name || !last_name || !street_address || !postal_code || !city || !country) {
     return res.status(400).json({ message: 'Tous les champs sont requis' });
   }
 
   const payload = {
     address_type: addressType,
-    street: address.rue,
+    street: address.street_address,
     postal_code: address.codePostal,
     city: address.ville,
     country: address.pays || "France", // Exemple, si le champ `pays` est manquant
@@ -175,7 +175,7 @@ exports.saveUserAddress = async (req, res) => {
         `UPDATE user_addresses 
          SET first_name = ?, last_name = ?, street = ?, postal_code = ?, city = ?, country = ?
          WHERE user_id = ? AND address_type = ?`,
-        [first_name, last_name, street, postal_code, city, country, userId, address_type]
+        [first_name, last_name, street_address, postal_code, city, country, userId, address_type]
       );
 
       return res.status(200).json({ message: 'Adresse mise à jour avec succès.' });
@@ -185,7 +185,7 @@ exports.saveUserAddress = async (req, res) => {
     await db.promise().query(
       `INSERT INTO user_addresses (user_id, address_type, first_name, last_name, street, postal_code, city, country)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, address_type, first_name, last_name, street, postal_code, city, country]
+      [userId, address_type, first_name, last_name, street_address, postal_code, city, country]
     );
 
     res.status(201).json({ message: 'Adresse ajoutée avec succès.' });
