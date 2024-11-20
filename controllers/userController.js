@@ -147,7 +147,7 @@ exports.saveUserAddress = async (req, res) => {
   const { address_type, first_name, last_name, street, postal_code, city, country } = req.body;
 
   if (!address_type || !first_name || !last_name || !street || !postal_code || !city || !country) {
-    return res.status(400).json({ message: 'Tous les champs sont requis.' });
+    return res.status(400).json({ message: 'Tous les champs sont requis' });
   }
 
   const payload = {
@@ -161,7 +161,7 @@ exports.saveUserAddress = async (req, res) => {
   };
 
   console.log("Payload envoyé :", payload);
-  
+
   try {
     // Vérifiez si une adresse du même type existe déjà
     const [existingAddress] = await db.promise().query(
