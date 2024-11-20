@@ -216,7 +216,7 @@ exports.getOrderItems = async (req, res) => {
 
     res.status(200).json({ items });
   } catch (error) {
-    console.error('Erreur lors de la récupération des items de la commande:', error);
+    console.error('Erreur lors  la récupération des items de la commande:', error);
     res.status(500).json({ message: 'Erreur interne lors de la récupération des items de la commande.' });
   }
 };
