@@ -67,20 +67,41 @@ exports.createOrRetrieveSetupIntent = async (req, res) => {
 exports.savePaymentMethod = async (req, res) => {
   const { customerId, paymentMethodId } = req.body;
 
+  console.log('Received request to save payment method'); // Log de réception
+  console.log('Request Body:', req.body); // Log complet du corps de la requête
+
   if (!customerId || !paymentMethodId) {
+    console.error('Missing customerId or paymentMethodId'); // Log en cas de champs manquants
     return res.status(400).json({ error: 'Customer ID and Payment Method ID are required.' });
   }
 
   try {
-    // Récupérez les détails de la méthode de paiement depuis Stripe
+    console.log('Retrieving payment method from Stripe...'); // Log avant l'appel à Stripe
     const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+
+    if (!paymentMethod || !paymentMethod.card) {
+      console.error('Invalid payment method details retrieved:', paymentMethod); // Log si les détails sont invalides
+      return res.status(400).json({ error: 'Invalid payment method details.' });
+    }
+
+    console.log('Payment Method retrieved:', paymentMethod); // Log des détails de la méthode de paiement
+
+    // Log des détails qui seront insérés dans la base de données
+    console.log('Preparing to save payment method to database:', {
+      userId: customerId,
+      paymentMethodId: paymentMethod.id,
+      last4: paymentMethod.card.last4,
+      brand: paymentMethod.card.brand,
+      expMonth: paymentMethod.card.exp_month,
+      expYear: paymentMethod.card.exp_year,
+    });
 
     // Sauvegardez la méthode de paiement dans votre base de données
     const query = `
-      INSERT INTO payment_methods (customer_id, payment_method_id, card_last4, card_brand, exp_month, exp_year)
+      INSERT INTO payment_methods (user_id, payment_method_id, card_last4, card_brand, exp_month, exp_year)
       VALUES (?, ?, ?, ?, ?, ?)
     `;
-    await db.query(query, [
+    const result = await db.query(query, [
       customerId,
       paymentMethod.id,
       paymentMethod.card.last4,
@@ -89,12 +110,15 @@ exports.savePaymentMethod = async (req, res) => {
       paymentMethod.card.exp_year,
     ]);
 
+    console.log('Payment method saved to database successfully:', result); // Log en cas de succès
+
     return res.status(201).json({ success: true });
   } catch (error) {
-    console.error('Error saving payment method:', error);
+    console.error('Error saving payment method:', error); // Log en cas d'erreur
     return res.status(500).json({ error: 'Failed to save payment method.' });
   }
 };
+
 
 // Récupérer les méthodes de paiement d'un utilisateur
 exports.getPaymentMethods = async (req, res) => {
