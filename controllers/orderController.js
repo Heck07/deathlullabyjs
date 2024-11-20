@@ -42,95 +42,60 @@ async function sendConfirmationEmail(email, orderId, signupToken, items, orderTo
   await transporter.sendMail(mailOptions);
 }
 
-
 exports.createOrder = async (req, res) => {
-  const { userId, email, saveAddress, shippingAddress, billingAddress, items, paymentIntentId, orderTotal, useShippingAsBilling } = req.body;
+  const {
+    userId,
+    email,
+    saveAddress,
+    shippingAddress,
+    billingAddress,
+    items,
+    paymentIntentId,
+    orderTotal,
+    useShippingAsBilling,
+    setupIntentId,
+  } = req.body;
 
   try {
-    // Vérifiez que `paymentIntentId` est fourni
-    if (!paymentIntentId) {
-      return res.status(400).json({ message: 'paymentIntentId manquant' });
+    // 1. Valider les entrées
+    if (!email || !items || !paymentIntentId) {
+      return res.status(400).json({ message: 'Données requises manquantes : email, items ou paymentIntentId' });
     }
 
     // Vérifier le paiement avec Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
     if (!paymentIntent || paymentIntent.status !== 'succeeded') {
-      console.error(`Échec du paiement : Statut - ${paymentIntent ? paymentIntent.status : 'Non trouvé'}`);
-      if (paymentIntent && paymentIntent.last_payment_error) {
-        console.error('Détails de l\'erreur :', paymentIntent.last_payment_error);
+      console.error(`Échec du paiement : ${paymentIntent ? paymentIntent.status : 'Non trouvé'}`);
+      if (paymentIntent?.last_payment_error) {
+        console.error('Erreur de paiement Stripe :', paymentIntent.last_payment_error.message);
       }
       return res.status(400).json({ message: 'Le paiement a échoué.' });
     }
 
+    // 2. Générer un utilisateur temporaire si userId n'est pas fourni
     let signupToken = null;
     if (!userId) {
       signupToken = await generateSignupToken();
-      await db.promise().query('INSERT INTO temp_users (email, signup_token) VALUES (?, ?) ON DUPLICATE KEY UPDATE signup_token = ?', [email, signupToken, signupToken]);
+      await db.promise().query(
+        `INSERT INTO temp_users (email, signup_token) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE signup_token = ?`,
+        [email, signupToken, signupToken]
+      );
     }
 
     const billing = useShippingAsBilling ? shippingAddress : billingAddress;
 
-    // Insérer la commande dans la table `orders`
-    const [orderResult] = await db.promise().query(`
-      INSERT INTO orders (
-        user_id, email, shipping_first_name, shipping_last_name, shipping_phone, 
-        shipping_street_address, shipping_postal_code, shipping_city, shipping_country, 
-        billing_first_name, billing_last_name, billing_street_address, 
-        billing_postal_code, billing_city, billing_country, payment_intent_id, order_total
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      userId || null,
-      email,
-      shippingAddress.firstName,
-      shippingAddress.lastName,
-      shippingAddress.phone,
-      shippingAddress.street,
-      shippingAddress.postalCode,
-      shippingAddress.city,
-      shippingAddress.country,
-      billing.firstName,
-      billing.lastName,
-      billing.street,
-      billing.postalCode,
-      billing.city,
-      billing.country,
-      paymentIntentId,
-      orderTotal,
-    ]);
-
-    const orderId = orderResult.insertId;
-
-    // Insérer les items de la commande dans `order_items`
-    const itemInserts = items.map(item => [
-      orderId,
-      item.productId,
-      item.color,
-      item.size,
-      item.quantity,
-      item.price
-    ]);
-
-    await db.promise().query(`
-      INSERT INTO order_items (order_id, product_id, color, size, quantity, price) 
-      VALUES ?
-    `, [itemInserts]);
-
-    // Sauvegarder les adresses dans `user_addresses` si l'utilisateur est connecté
-    if (userId && saveAddress) {
-      await db.promise().query(`
-        INSERT INTO user_addresses 
-        (user_id, address_type, first_name, last_name, phone, street_address, postal_code, city, country) 
-        VALUES (?, 'shipping', ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE 
-          first_name = VALUES(first_name), 
-          last_name = VALUES(last_name), 
-          phone = VALUES(phone), 
-          street_address = VALUES(street_address), 
-          postal_code = VALUES(postal_code), 
-          city = VALUES(city), 
-          country = VALUES(country)
-      `, [
-        userId,
+    // 3. Insérer la commande dans la table `orders`
+    const [orderResult] = await db.promise().query(
+      `INSERT INTO orders (
+         user_id, email, shipping_first_name, shipping_last_name, shipping_phone, 
+         shipping_street_address, shipping_postal_code, shipping_city, shipping_country, 
+         billing_first_name, billing_last_name, billing_street_address, 
+         billing_postal_code, billing_city, billing_country, payment_intent_id, order_total
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId || null,
+        email,
         shippingAddress.firstName,
         shippingAddress.lastName,
         shippingAddress.phone,
@@ -138,9 +103,63 @@ exports.createOrder = async (req, res) => {
         shippingAddress.postalCode,
         shippingAddress.city,
         shippingAddress.country,
-      ]);
+        billing.firstName,
+        billing.lastName,
+        billing.street,
+        billing.postalCode,
+        billing.city,
+        billing.country,
+        paymentIntentId,
+        orderTotal,
+      ]
+    );
+
+    const orderId = orderResult.insertId;
+
+    // 4. Insérer les articles de la commande dans `order_items`
+    const itemInserts = items.map((item) => [
+      orderId,
+      item.productId,
+      item.color,
+      item.size,
+      item.quantity,
+      item.price,
+    ]);
+
+    await db.promise().query(
+      `INSERT INTO order_items (order_id, product_id, color, size, quantity, price) 
+       VALUES ?`,
+      [itemInserts]
+    );
+
+    // 5. Sauvegarder l'adresse utilisateur si connecté et si demandé
+    if (userId && saveAddress) {
+      await db.promise().query(
+        `INSERT INTO user_addresses 
+         (user_id, address_type, first_name, last_name, phone, street_address, postal_code, city, country) 
+         VALUES (?, 'shipping', ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE 
+           first_name = VALUES(first_name), 
+           last_name = VALUES(last_name), 
+           phone = VALUES(phone), 
+           street_address = VALUES(street_address), 
+           postal_code = VALUES(postal_code), 
+           city = VALUES(city), 
+           country = VALUES(country)`,
+        [
+          userId,
+          shippingAddress.firstName,
+          shippingAddress.lastName,
+          shippingAddress.phone,
+          shippingAddress.street,
+          shippingAddress.postalCode,
+          shippingAddress.city,
+          shippingAddress.country,
+        ]
+      );
     }
-    //Sauvegarde le moyen de paiement si validé
+
+    // 6. Sauvegarder le moyen de paiement si `setupIntentId` est fourni
     if (setupIntentId) {
       const paymentMethod = await stripe.paymentMethods.retrieve(setupIntentId);
       if (paymentMethod) {
@@ -160,15 +179,16 @@ exports.createOrder = async (req, res) => {
       }
     }
 
-    // Envoie un email de confirmation
+    // 7. Envoie un email de confirmation
     await sendConfirmationEmail(email, orderId, signupToken, items, orderTotal);
 
     res.status(201).json({ message: 'Commande créée avec succès', orderId });
   } catch (error) {
-    console.error('Erreur lors de la création de la commande:', error);
+    console.error('Erreur lors de la création de la commande :', error);
     res.status(500).json({ message: 'Erreur lors de la commande', error });
   }
 };
+
 
 
 exports.createPaymentIntent = async (req, res) => {
