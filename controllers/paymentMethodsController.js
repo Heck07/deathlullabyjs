@@ -84,7 +84,6 @@ exports.savePaymentMethod = async (req, res) => {
       return res.status(400).json({ error: 'Invalid payment method details.' });
     }
 
-    console.log('Payment Method retrieved:', paymentMethod); // Log des détails de la méthode de paiement
 
     // Log des détails qui seront insérés dans la base de données
     console.log('Preparing to save payment method to database:', {
