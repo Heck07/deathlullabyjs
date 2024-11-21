@@ -53,13 +53,17 @@ exports.getAllProductsDetails = (req, res) => {
     SELECT 
       p.id AS product_id, 
       p.name AS product_name, 
-      p.price, 
+      p.price,
+      p.category_id,
+      cat.name AS category_name,
       c.id AS color_id, 
       c.color_name, 
       c.hex_code, 
       pi.image_url
     FROM 
       products p
+    LEFT JOIN 
+      categories cat ON p.category_id = cat.id
     LEFT JOIN 
       colors c ON p.id = c.product_id
     LEFT JOIN 
@@ -74,7 +78,7 @@ exports.getAllProductsDetails = (req, res) => {
 
     const products = results.reduce((acc, row) => {
       const {
-        product_id, product_name, price, color_id, color_name, hex_code, image_url
+        product_id, product_name, price, category_id, category_name, color_id, color_name, hex_code, image_url
       } = row;
 
       let product = acc.find(p => p.id === product_id);
@@ -83,7 +87,9 @@ exports.getAllProductsDetails = (req, res) => {
         product = { 
           id: product_id, 
           name: product_name, 
-          price, 
+          price,
+          category_id, 
+          category_name,
           colors: [] 
         };
         acc.push(product);
